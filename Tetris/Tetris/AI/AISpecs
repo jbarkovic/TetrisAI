@@ -1,7 +1,0 @@
-Priorities:
-	- If A full row can be acheived, do it
-	- Strategy changes based on how much of the board is full (go for more rows when empty, go for survival when near full
-	- possibly use drop shadows to predict outcomes
-	- need pattern recognition
-	- possibly include a delay to slow the AI down so if it runs to fast to see
-	- seperate placement solutions for empty boards

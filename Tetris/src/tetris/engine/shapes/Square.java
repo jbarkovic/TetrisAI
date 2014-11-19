@@ -1,4 +1,4 @@
-package tetris.engine.shapes;
+package source.tetris.engine.shapes;
 import tetris.engine.mechanics.Space;
 
 public class Square extends Shape{
