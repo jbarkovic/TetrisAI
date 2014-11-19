@@ -1,4 +1,4 @@
-package source.tetris.engine.mechanics;
+package tetris.engine.mechanics;
 import java.awt.EventQueue;
 import java.awt.event.KeyEvent;
 

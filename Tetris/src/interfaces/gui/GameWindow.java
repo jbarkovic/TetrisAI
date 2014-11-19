@@ -20,6 +20,10 @@ import tetris.engine.mechanics.*;
 import tetris.engine.shapes.SHAPETYPE;
 
 public class GameWindow extends JFrame {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private Engine engine;
 	private JPanel contentPane;
 	private int[][] gameState;

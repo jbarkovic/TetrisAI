@@ -1,4 +1,4 @@
-package source.tetris.engine.shapes;
+package tetris.engine.shapes;
 import tetris.engine.mechanics.Space;
 
 public class RightS extends Shape{

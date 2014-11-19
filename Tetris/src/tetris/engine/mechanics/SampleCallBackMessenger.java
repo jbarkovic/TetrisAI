@@ -1,4 +1,4 @@
-package source.tetris.engine.mechanics;
+package tetris.engine.mechanics;
 
 
 public class SampleCallBackMessenger extends CallBack{

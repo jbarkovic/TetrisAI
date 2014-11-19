@@ -1,4 +1,4 @@
-package source.tetris.engine.shapes;
+package tetris.engine.shapes;
 
 public enum SHAPETYPE {
 T,O,L,I,S,Z,J,NONE;

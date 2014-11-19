@@ -1,5 +1,5 @@
 package interfaces;
-import megatetris.interfaces.gui.*;
+import interfaces.gui.*;
 import tetris.engine.mechanics.*;
 
 public class CallBackMessenger extends CallBack {
