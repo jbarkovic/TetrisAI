@@ -1,15 +1,18 @@
 package ai.state;
 
-public class GameState {
+public class GameState implements java.io.Serializable { 
 	private BoardState boardWithCurrentShape 	= null;
 	private BoardState boardWithoutCurrentShape	= null;
-	
-	private ShapeState currentShape 		= null;
+	private ShapeState currentShape 			= null;
+	private String message = null;
+	private Integer [] otherShapeData; // Data about nextshape and swapshape etc... to be filled by other classes as needed
 	
 	public GameState () {}
+	public GameState (GameState old) {		
+		this.setState(new BoardState (old.getBoardWithoutCurrentShape()), new ShapeState (old.currentShape));
+	}
+	
 	public void setState (BoardState boardState, ShapeState shapeState) { // Will take gameboard with or without current shape		
-		int i = boardState.getState().length;
-		int j = boardState.getState()[0].length;
 		this.currentShape = new ShapeState(shapeState);
 		int [][] boardWithout = boardState.getStateCopy();
 		int [][] boardWith = boardState.getStateCopy();
@@ -21,6 +24,9 @@ public class GameState {
 		}
 		this.boardWithCurrentShape 		= new BoardState (boardWith);
 		this.boardWithoutCurrentShape 	= new BoardState (boardWithout);
+	}
+	public int [] getBoardSize () {
+		return this.boardWithCurrentShape.size();
 	}
 	public BoardState getBoardWithCurrentShape () {
 		return this.boardWithCurrentShape;
@@ -34,8 +40,18 @@ public class GameState {
 	public void setCurrentShape (ShapeState newCurrentShape) {
 		this.setState(this.boardWithoutCurrentShape, newCurrentShape);		
 	}
-	public GameState (GameState old) {		
-		this.setState(new BoardState (old.getBoardWithoutCurrentShape()), new ShapeState (old.currentShape));
+	public Integer[] getOtherShapeData() {
+		return otherShapeData;
+	}
+	public void setOtherShapeData(Integer[] otherShapeData) {
+		this.otherShapeData = otherShapeData;
+	}
+	public void setMessage (String message) {
+		if (this.message == null) this.message = message;
+		this.message += message;
+	}
+	public String getMessage () {
+		return this.message;
 	}
 	public static String dumpState (GameState inState, boolean printToOut) {
 		String message = "Game State Dump: \n";

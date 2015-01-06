@@ -9,14 +9,25 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 import ai.state.GameState;
-import ai.transformations.ShapeTransforms;
-import tetris.engine.shapes.SHAPETYPE;
+import ai.state.SHAPETYPE;
 
 public class SolutionValue {
+	
+	/** AC = config[0];  ==> Adjacent Count 		**/
+	/** MB = config[1];  ==> Missing Below  		**/
+	/** EC = config[2];  ==> Edge Count     		**/
+	/** DG = config[3];  ==> Distance From Bottom 	**/
+	/** RC = config[4];  ==> Rows Cleared   		**/ 
+	/** RD = config[5];  ==> Roughness Delta		**/
+	/** BF = config[6];  ==> Buried Factor  		**/
+	/** BG = config[7];  ==> Bad Gap Beside Shape	**/
+	
 	protected static double AC, MB, EC, DG, RC, RD, BF, BG;
-	//private double[] defaults = new double[] {2.5,1,1,1, 2.5, 3, 1,1};
-	//private double[] defaults = new double[] {1,2,2,1, 1, 0, 1,1};
-	protected static double[] defaults = new double[] {3,13,3,2,1,0 , 1,1};	
+	protected static double[] defaults = new double[] {10,10,10,1, 2.5, 3, 1,2.5};
+	//protected static double[] defaults = new double[] {10,10,10,1, 2.5, 3, 1,5}; Holly shit 95 000
+	//protected static double[] defaults = new double[] {4,9,5,1, 2, 0, 0,1};
+	//protected static double[] defaults = new double[] {5,5,65,0,1,0 , 1,0};	
+	//protected static double[] defaults = new double[] {10,10,8,1,0,0 , 1,0};	
 	private final static Logger LOGGER = Logger.getLogger(SolutionMaster.class.getName());
 	static {
 		LOGGER.setLevel(Logger.getGlobal().getLevel());		
@@ -64,14 +75,14 @@ public class SolutionValue {
 			}
 		}
 		try {
-			AC = config[0];
-			MB = config[1]; 
-			EC = config[2]; 
-			DG = config[3]; 
-			RC = config[4]; 
-			RD = config[5]; 
-			BF = config[6]; 
-			BG = config[7];
+			AC = config[0];  /** Adjacent Count 		**/
+			MB = config[1];  /** Missing Below  		**/
+			EC = config[2];  /** Edge Count     		**/
+			DG = config[3];  /** Distance From Bottom 	**/
+			RC = config[4];  /** Rows Cleared   		**/ 
+			RD = config[5];  /** Roughness Delta		**/
+			BF = config[6];  /** Buried Factor  		**/
+			BG = config[7];  /** Bad Gap Beside Shape	**/
 		} catch (Exception e) {			// likely either ArrayIndexOutOfBounds or NullPointer Exceptions
 			LOGGER.severe("Could not load optimized configuration into AI, using equal weightings... god speed");
 			AC = 1.0;
@@ -97,7 +108,7 @@ public class SolutionValue {
 		int adjacentCount 	= parameters [0];
 		int missingBelow	= parameters [1];
 		int edgeCount		= parameters [2];
-		int distanceFromTop	= parameters [3];
+		int distanceFromBottom	= parameters [3];
 		int numRowsThatWillClear	= parameters [4];
 		int roughness	= parameters [5];
 		int percentDown = parameters[6];
@@ -119,32 +130,38 @@ public class SolutionValue {
 				int dangling = 10 - (edgeCount + adjacentCount);
 				bonus -= dangling;				
 			}
-			bonus += distanceFromTop;
+			bonus += distanceFromBottom;
 		} else if (inState.getShape().getType() == SHAPETYPE.O) {
 			bonus -= missingBelow;
 		} else {		
-			if (percentDown < 33 || distanceFromTop < 5) {
+			/**if (percentDown < 33 || distanceFromBottom < 5) {
 				bonus += 3*EC*numRowsThatWillClear;
 				bonus -= 2*MB;
 				bonus += 2*EC;
-			}
+			}**/
 		}	
-		val = (int) ((int) AC*adjacentCount - (MB)*missingBelow + EC*edgeCount - ((int)DG*distanceFromTop) - BF*buriedFactor - BG*badGapBesideShape);
+		val = (int) ((int) bonus + AC*adjacentCount - (MB)*missingBelow + EC*edgeCount - BF*buriedFactor);
 		SolutionMaster.solutionText = "HIGHLIGHTED SOLUTION = " + val + "\n= bonus + AC*adjacentCount - MB*missingBelow + EC*edgeCount + DG*distanceFromTop + RC*numRowsThatWillClear \n" +
 				"AC = " + AC + " MB = " + MB + " EC = " + EC + " DG " + DG + " RC = " + RC + "\n" +
 				"\nbonus = " + bonus +
 				"\nadjacentCount = " + adjacentCount + 
 				"\nmissingBelow = " + missingBelow +
 				"\nedgeCount = " + edgeCount + 
-				"\ndistanceFromBottom = " + distanceFromTop +
+				"\ndistanceFromBottom = " + distanceFromBottom +
 				"\nnumRowsThatWillClear = " + numRowsThatWillClear +
 				"\nroughness = " + roughness +
 				"\nburiedFactor = " + buriedFactor +
 				"\nbadGapBesideShape = " + badGapBesideShape + 
 				"\n\n";	
 		//System.out.println(this.solutionText);
-		val += Math.abs(RC*numRowsThatWillClear*val);
+		val += Math.abs (RC*numRowsThatWillClear*(missingBelow - 1));
 		
+		if (missingBelow == 0) {
+			//val *= RC*numRowsThatWillClear; 
+		}
+		/* Scale the result by the height of the board */ 
+		//val += Math.abs (val * inState.getBoardSize() [0]);
+		val -= ((int)DG*100*((double) distanceFromBottom / (double) inState.getBoardSize() [0]));		
 		return val;
 	}
 	public static int[] getSolutionParameters(GameState inState) {
@@ -259,19 +276,6 @@ public class SolutionValue {
 		int adjacentCount = 0;
 		int [][] gB = inState.getBoardWithoutCurrentShape().getState();
 		for (int [] coord : inState.getShape().getCoords()) {
-//			for (int j=-1;j<2;j++) {
-//				for (int k=-1;k<2;k++) {
-//					try {
-//						//if (ShapeTransforms.isCoordPartOfCurrentShape(inState, new int [] {coord[0]+j,coord[1]+k}));
-//						if (gB [coord[0]+j][coord[1]+k] != 0) {
-//							if (j==0 && k==0) System.out.println("ERROR: SOLUTION VALUE: NOT DETECTING PART OF SHAPE PROPERLY");
-//							adjacentCount ++;
-//						}
-//					} catch (ArrayIndexOutOfBoundsException e) {
-//						//adjacentCount ++;
-//					}
-//				}
-//			}
 			for (int j=-1;j<2;j++) {
 				try {
 					if (gB [coord[0]+j][coord[1]] != 0) {
@@ -317,18 +321,6 @@ public class SolutionValue {
 		int roughness = 0;
 		final int maxCol = endColumn;
 		return 0;
-//		for (int c=startColumn;c<maxCol;c++) {
-//			int depth = getDepthOfColumn (boardCoords, c);		 
-//			int diff = depth - oldDepth;			
-//			if (diff < -1) {
-//				for (int subCol=c+1;subCol < maxCol;subCol++) {
-//					if (getDepthOfColumn (boardCoords, subCol) >= )
-//				}
-//				roughness += 
-//			}
-//
-//		}
-//		return roughness;
 	}
 	private static int getDepthOfColumn (int [][] gameBoard, int column) {
 		for (int r=0;r<gameBoard.length;r++) {				

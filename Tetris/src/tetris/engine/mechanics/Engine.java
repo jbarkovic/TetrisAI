@@ -712,13 +712,13 @@ public class Engine implements Tetris{
 		this.holdDrops = false;
 		return theChosenOne;
 	}
-	private Space[] getStartSpaces(Space[][] gameBoard) { // assumes a min length of 3 and min width of 2
-		int column1 = gameBoard[0].length / 2 -1;
-		int column2 = column1 + 1;
+	private Space[] getStartSpaces(Space[][] gameBoard) { // assumes a min height of 2  and min width of 4
+		int columnStart = (gameBoard [0].length / 2) - 2;
+		/*  Game boards with odd numbers of columns will spawn shapes slightly to the left of center, due to the
+		 *  even number of spaces required to spawn a shape */		 
 		return new Space[] {	
-				gameBoard[0][column1], gameBoard[0][column2],				
-				gameBoard[1][column1], gameBoard[1][column2],
-				gameBoard[2][column1], gameBoard[2][column2]
+				gameBoard[0][columnStart], gameBoard[0][columnStart+1],	gameBoard[0][columnStart+2], gameBoard[0][columnStart+3],
+				gameBoard[1][columnStart], gameBoard[1][columnStart+1],	gameBoard[1][columnStart+2], gameBoard[1][columnStart+3]
 				};
 	}
 	public Engine(int rows, int columns, int gravity,CallBack callBackMessenger) {

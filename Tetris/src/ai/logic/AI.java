@@ -1,6 +1,6 @@
 package ai.logic;
 
-import ai.gameinterface.EngineInterface;
+import interfaces.EngineInterface;
 
 public abstract class AI {
 	public abstract void run(EngineInterface inInterface);

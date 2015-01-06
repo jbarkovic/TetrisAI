@@ -15,6 +15,8 @@ public class Straight extends Shape{
 		this.rotateState = RotatePositions.UP;
 		this.ShapeColor = LocalShapeColor;
 		this.drawSpaces(true);	
+		this.rotateForward(); // Added to comply with the horizontal spawn requirement 
+		this.shiftRight();
 	}
 	public Straight getInstance(Space[][] gameBoard) {
 		return new Straight (gameBoard);

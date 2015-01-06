@@ -1,9 +1,9 @@
 package ai.state;
 
 import java.util.Arrays;
-import tetris.engine.shapes.SHAPETYPE;
 
-public class ShapeState {
+public class ShapeState implements java.io.Serializable {
+	// integer arrays are serializable though integers themselves are not 
 	private int [][] coords;
 	private SHAPETYPE type;
 	public ShapeState (int [][] coords, SHAPETYPE type) {

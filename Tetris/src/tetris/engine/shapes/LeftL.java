@@ -1,7 +1,7 @@
 package tetris.engine.shapes;
 import tetris.engine.mechanics.Space;
 
-public class LeftL extends Shape{
+public class LeftL /*J*/ extends Shape{
 	private RotatePositions rotateState;
 	private static int LocalShapeColor = 2;
 	private enum RotatePositions {
@@ -14,6 +14,7 @@ public class LeftL extends Shape{
 		this.rotateState = RotatePositions.UP;
 		this.ShapeColor = LocalShapeColor;
 		this.drawSpaces(true);	
+		this.rotateForward(); // Added to comply with the horizontal spawn requirement 
 	}
 	public LeftL getInstance(Space[][] gameBoard) {
 		return new LeftL (gameBoard);

@@ -1,6 +1,6 @@
 package ai.logic;
 
-import ai.gameinterface.EngineInterface;
+import interfaces.EngineInterface;
 import tetris.engine.mechanics.Engine;
 
 public class BackTrackAI extends AI {

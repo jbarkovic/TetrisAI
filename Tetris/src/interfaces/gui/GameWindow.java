@@ -6,6 +6,7 @@ import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 
 import javax.swing.JFrame;
@@ -14,6 +15,8 @@ import javax.swing.JPanel;
 import ai.*;
 import ai.logic.AI;
 import ai.logic.HeuristicAI;
+import ai.state.GameState;
+import ai.state.Journal;
 import interfaces.CallBackMessenger;
 import tetris.logging.TetrisLogger;
 import tetris.engine.mechanics.*;
@@ -35,6 +38,7 @@ public class GameWindow extends JFrame {
 	private boolean nextStarted = false;
 	private boolean needToRequestFocus = false;
 	private boolean justStarted = true;
+	private ArrayList<GameState> replay;
 	private int oldLinesCleared = 0;
 	private HeuristicAI ai;
 	private boolean germanMode = false;
@@ -84,17 +88,7 @@ public class GameWindow extends JFrame {
 			this.gameState = this.engine.getGameBoard();
 		}
 		this.gameBoard.updateScreen(this.gameState);		
-		if (this.nextShape != null && this.swapShape != null) {
-			if (this.swapShape.isFocused() || this.nextShape.isFocused()) {
-				this.requestFocus();
-			}
-			this.swapShape.updateScreen(new int[4][4]);
-			this.nextShape.updateScreen(new int[4][4]);
-			int[][] swapSpace = this.engine.getSwapBoard();
-			int[][] nextShape = this.engine.getNextShapeBoard();
-			this.swapShape.updateScreen(swapSpace);
-			this.nextShape.updateScreen(nextShape);
-		}
+		this.updateShapeBoards(this.engine.getSwapShape(), this.engine.getNextShape());
 		if (this.justStarted) {
 			this.updateSwap();
 			this.justStarted = false;
@@ -103,13 +97,39 @@ public class GameWindow extends JFrame {
 		if (this.oldLinesCleared < this.engine.getLinesCleared()) {
 			if (this.engine.getLinesCleared() % 10 == 0) {
 				int oldGravity = this.engine.getGravity();				
-				this.engine.setGravity(oldGravity - 10);	
+				//this.engine.setGravity(oldGravity - 10);	
 				System.out.println("Setting gravity to: " + (oldGravity - 10));
 			}
 			this.oldLinesCleared = this.engine.getLinesCleared();
 		}
 		this.ai.step();
 		this.setTitle("Mega Tetris" + " " + this.engine.getLinesCleared() + " Lines Cleared");
+	}
+	private void updateShapeBoards (SHAPETYPE swap, SHAPETYPE next) {
+		if (this.nextShape != null && this.swapShape != null) {
+			if (this.swapShape.isFocused() || this.nextShape.isFocused()) {
+				this.requestFocus();
+			}
+			this.swapShape.updateScreen(new int[4][4]);
+			this.nextShape.updateScreen(new int[4][4]);
+			int[][] swapSpace = this.getShapeDisplayPattern(swap);
+			int[][] nextShape = this.getShapeDisplayPattern(next);
+			this.swapShape.updateScreen(swapSpace);
+			this.nextShape.updateScreen(nextShape);
+		}
+	}
+	private int [][] getShapeDisplayPattern (SHAPETYPE type) {
+		int [][] out = new int [4][4];
+		switch (type) {
+		case T : return new int [][] {{0,0,0,0},{0,0,7,0},{0,7,7,7},{0,0,0,0}};
+		case I : return new int [][] {{0,0,0,0},{0,0,0,0},{6,6,6,6},{0,0,0,0}};
+		case O : return new int [][] {{0,0,0,0},{0,5,5,0},{0,5,5,0},{0,0,0,0}};
+		case J : return new int [][] {{0,0,0,0},{0,2,0,0},{0,2,2,2},{0,0,0,0}};
+		case L : return new int [][] {{0,0,0,0},{0,0,0,3},{0,3,3,3},{0,0,0,0}};
+		case S : return new int [][] {{0,0,0,0},{0,4,4,0},{4,4,0,0},{0,0,0,0}};
+		case Z : return new int [][] {{0,0,0,0},{0,1,1,0},{0,0,1,1},{0,0,0,0}};
+		default : return out;
+		}
 	}
 	private void updateSwap() {
 		if (this.swapShape == null || this.nextShape == null) {
@@ -203,16 +223,21 @@ public class GameWindow extends JFrame {
 		System.out.println("Loading...");
 		final String[] dim = args;
 		final int DEFAULTROWS = 16;
-		final int DEFAULTCOLUMNS = 10;
+		final int DEFAULTCOLUMNS = 10;		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
+				String historyFile = null; 
 				try {
 					int logLevel = 0;
 					try {
 						logLevel = Integer.parseInt(dim[2]);					
 					} catch (ArrayIndexOutOfBoundsException e0) {						
 					} catch (NullPointerException e1) {						
-					} catch (NumberFormatException e2) {				
+					} catch (NumberFormatException e2) {
+						try {
+							historyFile = dim [2];
+						} catch (ArrayIndexOutOfBoundsException e3) {}
+							
 					}
 					Level level = Level.OFF;
 					switch (logLevel) {
@@ -246,7 +271,7 @@ public class GameWindow extends JFrame {
 					} catch (NumberFormatException e2) {
 						rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
 					} finally {
-						GameWindow frame = new GameWindow(rows,columns);
+						GameWindow frame = new GameWindow(rows,columns, historyFile);
 						frame.setVisible(true);
 						//frame.updateScreen();
 					}
@@ -260,11 +285,21 @@ public class GameWindow extends JFrame {
 	/**
 	 * Create the frame."ERROR: SolutionNode: Owner not found"
 	 */
-	public GameWindow(int rows, int columns) {
+	public GameWindow(int rows, int columns, String historyFile) {
 
 		int scale = 30;
 		System.out.println("Starting.. ");
-        this.engine = new Engine(rows,columns,500,new CallBackMessenger(this)); 
+        this.engine = new Engine(rows,columns,500,new CallBackMessenger(this));
+        if (historyFile != null) {
+        	this.engine.pause();
+        	try {
+				this.replay = Journal.readJournal(historyFile).getHistory();
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("ERROR: could not read history file, will exit");
+				this.dispose();
+			}
+        }
 		this.gameBoard = new Board(rows,columns,scale,this.engine);
         add(this.gameBoard);
         this.pack();
@@ -380,27 +415,6 @@ public class GameWindow extends JFrame {
 				} catch (NumberFormatException e) {
 					// Do nothing
 				}
-//				else if (key == '1') {
-//					requestShape(Engine.ShapeType.I);
-//				}
-//				else if (key == '2') {
-//					requestShape(Engine.ShapeType.L);
-//				}
-//				else if (key == '3') {
-//					requestShape(Engine.ShapeType.J);
-//				}
-//				else if (key == '4') {
-//					requestShape(Engine.ShapeType.O);
-//				}
-//				else if (key == '5') {
-//					requestShape(Engine.ShapeType.Z);
-//				}
-//				else if (key == '6') {
-//					requestShape(Engine.ShapeType.S);
-//				}
-//				else if (key == '7') {
-//					requestShape(Engine.ShapeType.T);
-//				}
 			}
 			public void keyReleased(KeyEvent arg0) {
 				this.holdccRotate = false;
@@ -443,6 +457,21 @@ public class GameWindow extends JFrame {
 					}
 			}			
 		});
+		if (replay != null) {
+			ArrayList<GameState> tempBuffer = (ArrayList<GameState>) replay.clone();
+			while (tempBuffer.size() > 0) {
+				GameState currentState = tempBuffer.get(0);
+				tempBuffer.remove(0);
+				updateShapeBoards(SHAPETYPE.intToShapeType(currentState.getOtherShapeData()[1]), SHAPETYPE.intToShapeType(currentState.getOtherShapeData()[2]));
+				gameBoard.updateScreen(currentState.getBoardWithCurrentShape().getState());
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 }

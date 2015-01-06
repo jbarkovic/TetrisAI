@@ -2,6 +2,7 @@ package ai.transformations;
 
 import java.util.logging.Logger;
 
+import tetris.engine.shapes.SHAPETYPE;
 import ai.logic.SolutionMaster;
 import ai.state.*;
 
@@ -20,6 +21,9 @@ public class ShapeTransforms {
 	public static GameState predictRotate (GameState inState) {		
 		if (canRotate(inState)) {
 			ShapeState newCurrentShape = new ShapeState (RotationManager.getNextRotateCoords(inState), inState.getShape().getType());
+			if (inState.getShape().equals(newCurrentShape)) {
+				System.err.println("ERROR: Shapes equal after a rotate. Shapetype was " + inState.getShape().getType());
+			}
 			inState.setCurrentShape(newCurrentShape);
 		}
 		return inState;
@@ -57,9 +61,10 @@ public class ShapeTransforms {
 				break;
 			}
 		}		
-		if (displacement >= 0) { // for speed and robustness	
-			for (int [] coord : inState.getShape().getCoords()) {
-				coord[0] += displacement;
+		if (displacement >= 0) { // for speed and robustness
+			int [][] coords = inState.getShape().getCoords();
+			for (int coord =0;coord<coords.length;coord++) {
+				coords [coord][0] += displacement;
 			}
 		} else {
 			LOGGER.severe("Displacement Error in predict complete drop");

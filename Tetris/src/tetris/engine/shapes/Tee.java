@@ -13,7 +13,10 @@ public class Tee extends Shape{
 		this.setSpaces(shapeSpaces);
 		this.rotateState = RotatePositions.RIGHT;
 		this.ShapeColor = LocalShapeColor;
-		this.drawSpaces(true);	
+		this.drawSpaces(true);
+		this.rotateForward(); // Added to comply with the horizontal spawn requirement 
+		this.rotateForward(); // Added to comply with the horizontal spawn requirement 
+		this.rotateForward(); // Added to comply with the horizontal spawn requirement 
 	}
 	public Tee getInstance(Space[][] gameBoard) {
 		return new Tee (gameBoard);

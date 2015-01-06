@@ -46,6 +46,7 @@ public class SolutionNode {
 	private SolutionNode r1 = null;
 	private SolutionNode r2 = null;
 	private SolutionNode r3 = null;
+	static boolean [] movementCheck = new boolean [] {false, false, false, false, false, false};
 	
 	private final static Logger LOGGER = Logger.getLogger(SolutionNode.class.getName());
 	static {
@@ -65,6 +66,7 @@ public class SolutionNode {
 		KnownNodes.checkIn(this);
 		this.parentToUs = parentToUs;
 		if (this.parentToUs == SolutionDir.START) {
+			movementCheck = new boolean [] {false, false, false, false, false, false};
 			this.distance = POSINF;
 			KnownNodes.clear ();   // this is very important for correct operation without re-instantiation each time
 		}
@@ -78,9 +80,9 @@ public class SolutionNode {
 			solutionOwner = null;
 		}
 		if (this.parentToUs == (SolutionDir.START)) {
-			System.out.println("START");
+			LOGGER.info("START");
 			GameState.dumpState(this.ourState, true);
-			GameState dropState = ShapeTransforms.predictCompleteDrop(new GameState (this.ourState));
+			/**GameState dropState = ShapeTransforms.predictCompleteDrop(new GameState (this.ourState));
 			if (Arrays.deepEquals(this.ourState.getBoardWithCurrentShape().getState(),dropState.getBoardWithCurrentShape().getState())) {
 				LOGGER.warning("ARRAYS ARE EQUAL< THEY SHOULD NOT BE!!");
 			}
@@ -89,11 +91,12 @@ public class SolutionNode {
 			message = SolutionMaster.solutionText + "\n";
 			for (int i=0;i<4;i++) {
 				message += "["+dropState.getShape().getCoords() + "," + dropState.getShape().getCoords()[i][1] + "], ";
-			}
+			}**/
 		}
 				
 		// SOLVE THE RIGHT NODE
 		if (ShapeTransforms.canShiftRight(this.ourState) && this.parentToUs != SolutionDir.LEFT) {
+			movementCheck [0] = true;
 			//System.out.println("CAN RIGHT");
 			GameState right = ShapeTransforms.predictShiftRight(new GameState (this.ourState));
 			this.r = KnownNodes.getNode(right);
@@ -111,6 +114,7 @@ public class SolutionNode {
 		}
 		// SOLVE THE LEFT NODE
 		if (ShapeTransforms.canShiftLeft(this.ourState)  && this.parentToUs != SolutionDir.RIGHT) {
+			movementCheck [1] = true;
 			//System.out.println("CAN LEFT");
 			GameState left = ShapeTransforms.predictShiftLeft(new GameState (this.ourState));
 			this.l = KnownNodes.getNode(left);
@@ -126,9 +130,11 @@ public class SolutionNode {
 		} else {
 			this.l = null;
 		}
-		if ((this.parentToUs == SolutionDir.START) || (this.parentToUs != SolutionDir.ROTATE1 && this.parentToUs != SolutionDir.ROTATE2 && this.parentToUs!= SolutionDir.ROTATE3)) { // prevent infinite recursion
+		if ((this.parentToUs != SolutionDir.ROTATE1 && this.parentToUs != SolutionDir.ROTATE2 && this.parentToUs!= SolutionDir.ROTATE3)) { // prevent infinite recursion
 			// SOLVE THE ROTATE1 NODE
+			
 			if (ShapeTransforms.canRotate(this.ourState)) {
+				movementCheck [2] = true;
 			//	System.out.println("CAN ROT1");
 				GameState rotate1 = ShapeTransforms.predictRotate(new GameState (this.ourState));
 				this.r1 = KnownNodes.getNode(rotate1);
@@ -149,8 +155,10 @@ public class SolutionNode {
 		}
 		// SOLVE THE ROTATE2 NODE
 		if (this.parentToUs == SolutionDir.ROTATE1) { // prevent infinite recursion
+			
 			//LOGGER.info("In rotate 2");
 			if (ShapeTransforms.canRotate(this.ourState)) {
+				movementCheck [3] = true;
 				//System.out.println("CAN ROT2");
 				//LOGGER.info("Could rotate R2");
 				GameState rotate2 = ShapeTransforms.predictRotate(new GameState (this.ourState));
@@ -171,7 +179,9 @@ public class SolutionNode {
 		}
 		// SOLVE THE ROTATE3 NODE
 		if (this.parentToUs == SolutionDir.ROTATE2) { // prevent infinite recursion
+			
 			if (ShapeTransforms.canRotate(this.ourState)) {
+				movementCheck [4] = true;
 				//System.out.println("CAN ROT3");
 				//LOGGER.info("Could rotate R3");
 				GameState rotate3 = ShapeTransforms.predictRotate(new GameState (this.ourState));
@@ -182,6 +192,7 @@ public class SolutionNode {
 					this.r3.Solve();
 					this.distR3 = this.r3.getDistance();
 				} else {
+					this.r3 = null;
 				//	if (!this.r3.hasFoundSolution()) this.r3 = null;
 				}
 			} else {
@@ -193,6 +204,8 @@ public class SolutionNode {
 		
 		// SOLVE THE DROP NODE --- note should be last
 		if (ShapeTransforms.canDrop(this.ourState)) {
+			//this.d = null;
+			movementCheck [5] = true;
 			//System.out.println("CAN DRP");
 			GameState drop = ShapeTransforms.predictDropOnce(new GameState (this.ourState));
 			this.d = KnownNodes.getNode(drop);
@@ -200,7 +213,7 @@ public class SolutionNode {
 			//	LOGGER.info("Drop...");
 				this.d = new SolutionNode(drop,this,SolutionDir.DOWN);
 				this.d.Solve();
-				this.distD = this.d.getDistance() + 1;
+				this.distD = this.d.getDistance();
 			} else {
 				//if (!this.d.hasFoundSolution()) this.d = null;
 			}
@@ -211,42 +224,45 @@ public class SolutionNode {
 		this.solFINAL = NEGINF;		
 		int bestSolution = NEGINF;
 		// GET OUR SOLUTION AS IS
-		if (this.d == null || this.r == null || this.l == null || this.r1 == null || this.r2 == null || this.r3 == null) {
+		//if (this.d == null || this.r == null || this.l == null || this.r1 == null || this.r2 == null || this.r3 == null) {
 			GameState dropState = ShapeTransforms.predictCompleteDrop(new GameState (this.ourState));
 			int[] params = SolutionValue.getSolutionParameters(dropState);
 			this.solFINAL = SolutionValue.calculateSolution(this.ourState, params, false);
-			this.message = ("SOLUTIONNODE:" + this.ourState.getShape().getType().toString() +" ["+this.solFINAL+"]" +SolutionMaster.solutionText+"\n");
+			/**this.message = ("SOLUTIONNODE:" + this.ourState.getShape().getType().toString() +" ["+this.solFINAL+"]" +SolutionMaster.solutionText+"\n");
 			for (int [] coord : dropState.getShape().getCoords()) {
 				this.message += "{" + coord[0] + "," + coord[1] + "}";
-			}
-		}
+			}**/
+		//}
 		
 		// COMBINE SOLUTION
-		if (this.r  != null && this.r.hasFoundSolution()  && this.r.getSolutionVal()  >= bestSolution && this.distance > this.r.getDistance())  {bestSolution = this.r.getSolutionVal();}
-		if (this.l  != null && this.l.hasFoundSolution()  && this.l.getSolutionVal()  >= bestSolution && this.distance > this.l.getDistance())  {bestSolution = this.l.getSolutionVal();}
-		if (this.d  != null && this.d.hasFoundSolution()  && this.d.getSolutionVal()  >= bestSolution && this.distance > this.d.getDistance())  {bestSolution = this.d.getSolutionVal();}
-		if (this.r1 != null && this.r1.hasFoundSolution() && this.r1.getSolutionVal() >= bestSolution && this.distance > this.r1.getDistance()) {bestSolution = this.r1.getSolutionVal();}
-		if (this.r2 != null && this.r2.hasFoundSolution() && this.r2.getSolutionVal() >= bestSolution && this.distance > this.r2.getDistance()) {bestSolution = this.r2.getSolutionVal();}
-		if (this.r3 != null && this.r3.hasFoundSolution() && this.r3.getSolutionVal() >= bestSolution && this.distance > this.r3.getDistance()) {bestSolution = this.r3.getSolutionVal();}
+		if (this.r  != null && this.r.hasFoundSolution()  && this.r.getSolutionVal()  >= bestSolution)  {bestSolution = this.r.getSolutionVal();}
+		if (this.l  != null && this.l.hasFoundSolution()  && this.l.getSolutionVal()  >= bestSolution)  {bestSolution = this.l.getSolutionVal();}
+		if (this.d  != null && this.d.hasFoundSolution()  && this.d.getSolutionVal()  >= bestSolution)  {bestSolution = this.d.getSolutionVal();}
+		if (this.r1 != null && this.r1.hasFoundSolution() && this.r1.getSolutionVal() >= bestSolution)  {bestSolution = this.r1.getSolutionVal();}
+		if (this.r2 != null && this.r2.hasFoundSolution() && this.r2.getSolutionVal() >= bestSolution)  {bestSolution = this.r2.getSolutionVal();}
+		if (this.r3 != null && this.r3.hasFoundSolution() && this.r3.getSolutionVal() >= bestSolution)  {bestSolution = this.r3.getSolutionVal();}
 		
 		this.distance = POSINF;
 		
-		if (this.r  != null && this.r.hasFoundSolution()  && this.r.getSolutionVal()  == bestSolution && this.distance > this.r.getDistance())  {this.distance = this.r.getDistance()+1;}
-		if (this.l  != null && this.l.hasFoundSolution()  && this.l.getSolutionVal()  == bestSolution && this.distance > this.l.getDistance())  {this.distance = this.l.getDistance()+1;}
-		if (this.d  != null && this.d.hasFoundSolution()  && this.d.getSolutionVal()  == bestSolution && this.distance > this.d.getDistance())  {this.distance = this.d.getDistance()+2;}
-		if (this.r1 != null && this.r1.hasFoundSolution() && this.r1.getSolutionVal() == bestSolution && this.distance > this.r1.getDistance()) {this.distance = this.r1.getDistance()+1;}
-		if (this.r2 != null && this.r2.hasFoundSolution() && this.r2.getSolutionVal() == bestSolution && this.distance > this.r2.getDistance()) {this.distance = this.r2.getDistance()+1;}
-		if (this.r3 != null && this.r3.hasFoundSolution() && this.r3.getSolutionVal() == bestSolution && this.distance > this.r3.getDistance()) {this.distance = this.r3.getDistance()+1;}
+		// The drop node is evaluated first with a (>) then the rest follow with a (>=) so that all other moves are done before any dropping unless absolutely necessary (safer)
+		if (this.d  != null && this.d.hasFoundSolution()  && this.d.getSolutionVal()  == bestSolution && this.distance >= this.d.getDistance())  {this.distance = this.d.getDistance()+1;}
+		if (this.r  != null && this.r.hasFoundSolution()  && this.r.getSolutionVal()  == bestSolution && this.distance >= this.r.getDistance())  {this.distance = this.r.getDistance()+3;}
+		if (this.l  != null && this.l.hasFoundSolution()  && this.l.getSolutionVal()  == bestSolution && this.distance >= this.l.getDistance())  {this.distance = this.l.getDistance()+3;}
+		if (this.r1 != null && this.r1.hasFoundSolution() && this.r1.getSolutionVal() == bestSolution && this.distance >= this.r1.getDistance()) {this.distance = this.r1.getDistance()+3;}
+		if (this.r2 != null && this.r2.hasFoundSolution() && this.r2.getSolutionVal() == bestSolution && this.distance >= this.r2.getDistance()) {this.distance = this.r2.getDistance()+3;}
+		if (this.r3 != null && this.r3.hasFoundSolution() && this.r3.getSolutionVal() == bestSolution && this.distance >= this.r3.getDistance()) {this.distance = this.r3.getDistance()+3;}
+		
 	
-		if (this.solFINAL >= bestSolution) {bestSolution = this.solFINAL; this.distance = 0;}
+		if (this.solFINAL >= bestSolution) {
+			bestSolution = this.solFINAL; 
+			this.distance = 0;
+			solutionOwner = this;
+			LOGGER.info("WE WERE THE VERY BEST,\n  LIKE NO ONE EVER WAS: " + this.parentToUs.toString());
+		}
 		
 		this.ourSolution = bestSolution;
 		if (this.ourSolution > highestScore) {
 			highestScore = this.ourSolution;
-			if (bestSolution == this.solFINAL) {
-				solutionOwner = this;
-				LOGGER.info("WE WERE THE VERY BEST,\n  LIKE NO ONE EVER WAS: " + this.parentToUs.toString());
-			}
 		}
 		return bestSolution;
 	}
@@ -281,28 +297,29 @@ public class SolutionNode {
 		this.nextMove = SolutionDir.PLUMMIT;
 		this.next = null;
 		
+		//System.out.print("Movement Check: " + movementCheck [0] + " , " + movementCheck [1] + " , " + movementCheck [2] + " , " + movementCheck [3] + " , " + movementCheck [4] + " , " + movementCheck [5] + "{}\n");
 		int nullCheck = 0; 
 		int directionCheck = 1;
-		if (this.d  != null) { this.distD  = this.d.getDistance() + 1; nullCheck |= 1;}  else {this.distD  = POSINF;}
-		if (this.r  != null) { this.distR  = this.r.getDistance() + 1; nullCheck |= 2;}  else {this.distR  = POSINF;}
-		if (this.l  != null) { this.distL  = this.l.getDistance() + 1; nullCheck |= 4;}  else {this.distL  = POSINF;}
-		if (this.r1 != null) { this.distR1 = this.r1.getDistance() + 1; nullCheck |= 8;} else {this.distR1 = POSINF;}
-		if (this.r2 != null) { this.distR2 = this.r2.getDistance() + 1; nullCheck |= 16;} else {this.distR2 = POSINF;}
-		if (this.r3 != null) { this.distR3 = this.r3.getDistance() + 1; nullCheck |= 32;} else {this.distR3 = POSINF;}
+		if (this.d  != null) { this.distD  = this.d.getDistance()  ; nullCheck |= 1;}  else {this.distD  = POSINF;}
+		if (this.r  != null) { this.distR  = this.r.getDistance()  ; nullCheck |= 2;}  else {this.distR  = POSINF;}
+		if (this.l  != null) { this.distL  = this.l.getDistance()  ; nullCheck |= 4;}  else {this.distL  = POSINF;}
+		if (this.r1 != null) { this.distR1 = this.r1.getDistance() ; nullCheck |= 8;} else {this.distR1 = POSINF;}
+		if (this.r2 != null) { this.distR2 = this.r2.getDistance() ; nullCheck |= 16;} else {this.distR2 = POSINF;}
+		if (this.r3 != null) { this.distR3 = this.r3.getDistance() ; nullCheck |= 32;} else {this.distR3 = POSINF;}
 		// Check for solution from neighbors equal to ours, with shortest path
 		if (this.solFINAL == this.ourSolution) {
 			LOGGER.info("We were the highest solution: " + this.parentToUs.toString());
 			this.next = null;
 			this.nextMove = SolutionDir.PLUMMIT;
-		} else {
+		} else {			
 			if (this.distR  < bestDistance && this.r.getSolutionVal()  == this.ourSolution) {directionCheck &= 0; bestDistance = this.distR;  this.next = this.r;this.nextMove  = SolutionDir.RIGHT;}
-			if (this.distD  < bestDistance && this.d.getSolutionVal()  == this.ourSolution) {directionCheck &= 0; bestDistance = this.distD;  this.next = this.d;this.nextMove  = SolutionDir.DOWN;}
 			if (this.distL  < bestDistance && this.l.getSolutionVal()  == this.ourSolution) {directionCheck &= 0; bestDistance = this.distL;  this.next = this.l;this.nextMove  = SolutionDir.LEFT;}
 			if (this.distR1 < bestDistance && this.r1.getSolutionVal() == this.ourSolution) {directionCheck &= 0; bestDistance = this.distR1; this.next = this.r1;this.nextMove = SolutionDir.ROTATE1;}
 			if (this.distR2 < bestDistance && this.r2.getSolutionVal() == this.ourSolution) {directionCheck &= 0; bestDistance = this.distR2; this.next = this.r2;this.nextMove = SolutionDir.ROTATE2;}
 			if (this.distR3 < bestDistance && this.r3.getSolutionVal() == this.ourSolution) {directionCheck &= 0; bestDistance = this.distR3; this.next = this.r3;this.nextMove = SolutionDir.ROTATE3;}
+			if (this.distD  < bestDistance && this.d.getSolutionVal()  == this.ourSolution) {directionCheck &= 0; bestDistance = this.distD;  this.next = this.d;this.nextMove  = SolutionDir.DOWN;}
 		}
-		LOGGER.info("bestDistance: " + bestDistance + " this.OurSolution: " + this.ourSolution + " , this.solFinal: " + this.solFINAL+ " ThisnextMove: " + this.nextMove.toString() );
+		LOGGER.info("bestDistance: " + bestDistance + " this.OurSolution: " + this.ourSolution + " , this.solFinal: " + this.solFINAL+ " ThisnextMove: " + this.nextMove.toString() + " our coords: " + Arrays.toString(this.ourState.getShape().getCoords()[0]) + Arrays.toString(this.ourState.getShape().getCoords()[1]) + Arrays.toString(this.ourState.getShape().getCoords()[2]) + Arrays.toString(this.ourState.getShape().getCoords()[3]));
 		switch (this.nextMove) {
 			//TODO replace {0,0,-1}arrays with enums and/or constants defined in Solution Master;
 			case LEFT : 	{ solutionPattern[solutionPatternPointer++] = new int[] {0,-1,0}; /**LOGGER.info("LEFT")**/; break;}
@@ -315,13 +332,17 @@ public class SolutionNode {
 			default : 		{ solutionPattern[solutionPatternPointer++] = new int[] {0,0,0}; LOGGER.info("Notice: using default for some reason");break;}
 		}
 		if (solutionPatternPointer == solutionPattern.length) {
-			int newLength = bestDistance >= 5 ? bestDistance : 5;
+			//int newLength = bestDistance >= 5 ? bestDistance : 5;
+			int newLength = 5;
 			int [][] temp = Arrays.copyOf(solutionPattern, solutionPattern.length + newLength);
 			solutionPattern = temp;
+			for (int i=0;i<solutionPattern.length;i++) {
+				if (solutionPattern [i] == null) solutionPattern [i] = new int [3];
+			}
 		}
 		if (this.next != null) {
 			if (this.next.equals(this)) {
-				System.out.println("The next node is ourself, prolly going to stack overflow...");
+				LOGGER.info("The next node is ourself, prolly going to stack overflow...");
 			}
 			this.next.followSolution();
 		} else { // THE END OF THE RECURSION, ALSO THE LAST MOVE FOR THE CURRENT SHAPE
@@ -329,7 +350,7 @@ public class SolutionNode {
 			for (int i=0;i<solutionPattern.length;i++) {
 				message += "{"+solutionPattern[i][0]+","+solutionPattern[i][1]+"," + solutionPattern[i][2]+"}\n";
 			}
-			System.out.println("Final Solution Had the following Values: \n"+this.message);		
+			LOGGER.info("Final Solution Had the following Values: \n"+this.message);		
 			
 			LOGGER.warning ("PARENT TO SOLUTION OWNER: " + this.parentToUs);
 			if (nullCheck == 0) {
@@ -385,7 +406,7 @@ public class SolutionNode {
 			int sizebef = knownSolutionNodes.size();
 			if (!knownSolutionNodes.contains(node))knownSolutionNodes.add(node);
 			int sizeaft = knownSolutionNodes.size();
-			if (sizeaft != sizebef && sizeaft%100 == 0) System.out.println("Number Of Known Solution Nodes: " + sizeaft);
+			if (sizeaft != sizebef && sizeaft%100 == 0) LOGGER.info("Number Of Known Solution Nodes: " + sizeaft);
 		}
 		protected static SolutionNode getNode(GameState inState) {
 			int [][] coords = inState.getShape().getCoords();
@@ -397,7 +418,7 @@ public class SolutionNode {
 			return null; // does not exist yet
 		}
 		protected static void clear () {
-			System.out.println("SIZE AT CLEAR" +knownSolutionNodes.size());
+			LOGGER.info("SIZE AT CLEAR" +knownSolutionNodes.size());
 			knownSolutionNodes = new ArrayList<SolutionNode> (); // this is very important for correct operation without re-instantiation each time
 		}
 	}

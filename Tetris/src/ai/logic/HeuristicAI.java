@@ -2,22 +2,26 @@ package ai.logic;
 
 import tetris.engine.mechanics.*;
 import tetris.engine.shapes.*;
+import interfaces.EngineInterface;
 
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 
 import javax.swing.Timer;
 
-import ai.gameinterface.EngineInterface;
 import ai.state.BoardState;
 import ai.state.GameState;
+import ai.state.Journal;
 import ai.state.ShapeState;
 
+import java.util.Calendar;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class HeuristicAI {
-		private Engine engine;
 		private boolean holdUpdates;
 		private boolean stopped;
 		private boolean usePlummit;
@@ -44,9 +48,10 @@ public class HeuristicAI {
 		private boolean testingSolutions = false;
 		private int moveCount = 0;
 		private Journal journal;
+		private EngineInterface engine;
 		private static final Logger LOGGER = Logger.getLogger(AI.class.getName());
 		static {
-			LOGGER.setLevel(Logger.getGlobal().getLevel());		
+			LOGGER.setLevel(Level.SEVERE);		
 		}
 
 		public HeuristicAI() {
@@ -57,16 +62,16 @@ public class HeuristicAI {
 			this.usePlummit = false;
 			this.waitStep = false;
 			this.emergencyShiftAmount = 0;
-			this.delay = 40;		
+			this.delay = 30;		
 			Stepper.start(this.delay,this);
 
 		}
 		public void run(Engine inEngine) {			
 			if (inEngine != null) {
-				this.engine = inEngine;
+				this.engine = new EngineInterface (inEngine);
 				this.gameBoard = this.engine.getGameBoard();		
 				if (this.journal == null) {
-					this.journal = new Journal(this.gameBoard.length, this.gameBoard[0].length);
+					this.journal = new Journal();
 				}
 			} else {
 				this.gameBoard = this.engine.getGameBoard();
@@ -90,7 +95,17 @@ public class HeuristicAI {
 			this.stopped = true;
 			this.holdUpdates = true;
 			this.stillDeciding = false;
-			if (this.journal != null && !this.testingSolutions) this.journal.print();
+			if (this.journal != null && !this.testingSolutions) {
+				this.journal.print();
+				File outfile = new File ("./" + Long.toString(Calendar.getInstance().getTimeInMillis()));
+				try {					
+					this.journal.writeStates(outfile);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					System.err.println("ERROR: Could not write history to file: " + outfile.getAbsolutePath() + " \nWill ignore and continue like nothing happened.");
+				}
+			}
 		}
 		public boolean isRunning() {
 			return !this.stopped;
@@ -120,12 +135,14 @@ public class HeuristicAI {
 				this.solutionPointer = -1;
 				this.waitStep = false;
 
+				
 				this.doASwap = false;
 				this.decide(true);
 				this.dumpSolution(new String[] {"Sol"},true);				
-				if (!this.testingSolutions) this.logState("");
+				//if (!this.testingSolutions)  this.logState("");
 			} else {			
 				if (this.expectingAChange) {
+				//	if (!this.testingSolutions) this.logState("");
 					//LOGGER.warning("Caught a change we were expecting! ");
 					//this.expectingAChange = false;
 					return;
@@ -148,15 +165,17 @@ public class HeuristicAI {
 		}
 		private void logState (String message) {
 			if (this.journal != null) {
-				this.journal.add(this.gameBoard, this.engine.getCurrentShape().toInt(), this.engine.getNextShape().toInt(), this.engine.getSwapShape().toInt(), message + SolutionNode.getLastKnownMessage());
+				GameState currentState = new GameState ();
+				currentState.setState(new BoardState (this.engine.getGameBoard()), new ShapeState (this.engine.getCoordsOfCurrentShape(), this.engine.getCurrentShape()));
+				this.journal.add(currentState, this.engine.getCurrentShape().toInt(), this.engine.getNextShape().toInt(), this.engine.getSwapShape().toInt(), message + SolutionNode.getLastKnownMessage());
 			}
 		}
 		public int testSolution (Engine inEngine) {
-			if (this.engine == null) this.engine = inEngine;
+			if (this.engine == null) this.engine = new EngineInterface (inEngine);
 			if (this.stillDeciding) {
 				return 0;		
 			} else if (this.solMaster != null) {
-				System.out.println("==================================================================\n"
+				LOGGER.info("==================================================================\n"
 						+ "\tSolving... \n ===========================================================");
 				GameState currentState = new GameState ();
 				currentState.setState(new BoardState (this.engine.getGameBoard()), new ShapeState (this.engine.getCoordsOfCurrentShape(), this.engine.getCurrentShape()));
@@ -179,7 +198,7 @@ public class HeuristicAI {
 				GameState currentState = new GameState ();
 				currentState.setState(new BoardState (this.gameBoard), new ShapeState (this.engine.getCoordsOfCurrentShape(), this.engine.getCurrentShape()));
 				for (int c=0;c<this.engine.getGameBoard()[0].length;c++) {
-					System.out.print(this.engine.getGameBoard()[this.engine.getGameBoard().length-1][c]);
+					LOGGER.info(Integer.toString(this.engine.getGameBoard()[this.engine.getGameBoard().length-1][c]));
 				}
 				System.out.println();
 				System.out.println("AI DUMPING...");
@@ -323,7 +342,7 @@ public class HeuristicAI {
 					for (int rotate=0;rotate<patt[0];rotate++) {
 						this.expectingAChange = true;		
 						LOGGER.warning("rotateCW...");
-						if(this.engine.forceRotateCW()) {
+						if(this.engine.forceRotate ()) {
 							this.dumpSolution(new String[] {"Rotate Clockwise"},true);
 							//this.stop();
 						}

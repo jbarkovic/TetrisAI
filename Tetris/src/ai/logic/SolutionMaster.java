@@ -2,6 +2,7 @@ package ai.logic;
 
 import tetris.engine.mechanics.*;
 import tetris.engine.shapes.*;
+import interfaces.EngineInterface;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -16,6 +17,7 @@ import java.util.logging.Logger;
 
 import ai.state.BoardState;
 import ai.state.GameState;
+import ai.state.Journal;
 import ai.state.RotationManager;
 import ai.state.ShapeState;
 import ai.transformations.ShapeTransforms;
@@ -23,7 +25,7 @@ import ai.transformations.ShapeTransforms;
 
 public class SolutionMaster {
 	static String solutionText = "";
-	private final Engine engine;
+	private final EngineInterface engine;
 	
 	private Journal journal;
 	
@@ -33,15 +35,15 @@ public class SolutionMaster {
 		LOGGER.setLevel(Level.INFO);	
 	}
 
-	public SolutionMaster() {
+	public SolutionMaster () {
 		this.engine = null;
 		SolutionValue.loadConfiguration(null);
 	}
-	public SolutionMaster(Engine engine,String configFile,Journal journal) {
+	public SolutionMaster (EngineInterface engine,String configFile,Journal journal) {
 		this(engine,configFile);
 		this.journal = journal;			
 	}
-	public SolutionMaster(Engine engine,String configFile) {		//	 this was added to facilitate tweaking of the weighting function coefficients
+	public SolutionMaster (EngineInterface engine,String configFile) {		//	 this was added to facilitate tweaking of the weighting function coefficients
 		this.engine = engine;
 		SolutionValue.loadConfiguration(configFile);
 	}
@@ -63,8 +65,8 @@ public class SolutionMaster {
 		//knownSolutionNodes = new ArrayList<SolutionNode> ();  			// this is very important for correct operation without re-instantiation each time
 		GameState ours = new GameState ();
 		ours.setState(inState.getBoardWithoutCurrentShape(), new ShapeState (RotationManager.learnShape(inState, this.engine, notCurrentShape),inState.getShape().getType()));
-		System.out.println("Solution Master Dumping: \n");
-		ours.dumpState(ours, true);
+	//	System.out.println("Solution Master Dumping: \n");
+	//	ours.dumpState(ours, true);
 		// get start coords. for "hypothetical" shape
 
 		if (testOnly) {
@@ -73,13 +75,13 @@ public class SolutionMaster {
 			System.out.println(solutionText);
 			return new Solution ();
 		} else {
-			SolutionNodeFullBackTrack start = new SolutionNodeFullBackTrack(inState, null,SolutionNodeFullBackTrack.SolutionDir.START);
+			SolutionNode start = new SolutionNode(inState, null,SolutionNode.SolutionDir.START);
 			retVal.setValue(start.Solve());
 
 			LOGGER.info("SolutionMaster: -> solutionVal: "+ retVal.getValue());
 			//TRAVERSE SOLUTION
 			if (isTopLevel) {
-				if (LOGGER.getLevel() == Level.INFO) System.out.println("SOLVER FOUND: (" + retVal.getValue() +")\n"+start.getMessage());
+				LOGGER.info("SOLVER FOUND: (" + retVal.getValue() +")\n"+start.getMessage());
 
 				start.followSolution();
 				retVal.finalState.setState(new BoardState (inState.getBoardWithoutCurrentShape()), new ShapeState (start.getSolutionCoords(), inState.getShape().getType()));

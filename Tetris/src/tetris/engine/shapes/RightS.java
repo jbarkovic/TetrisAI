@@ -14,7 +14,7 @@ public class RightS extends Shape{
 		this.rotateState = RotatePositions.UP;
 		this.ShapeColor = LocalShapeColor;
 		this.drawSpaces(true);
-	
+		this.rotateForward(); // Added to comply with the horizontal spawn requirement 
 	}
 	public RightS getInstance(Space[][] gameBoard) {
 		return new RightS (gameBoard);
