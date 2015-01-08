@@ -1,6 +1,4 @@
 package interfaces.gui;
-import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Point;
 import java.awt.event.KeyAdapter;
@@ -10,10 +8,7 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 
-import ai.*;
-import ai.logic.AI;
 import ai.logic.HeuristicAI;
 import ai.state.GameState;
 import ai.state.Journal;
@@ -23,28 +18,23 @@ import tetris.engine.mechanics.*;
 import tetris.engine.shapes.SHAPETYPE;
 
 public class GameWindow extends JFrame {
+
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -2037282391019749417L;
 	private Engine engine;
-	private JPanel contentPane;
 	private int[][] gameState;
 	private Board gameBoard;
 	private AuxShapeBoard swapShape;
 	private AuxShapeBoard nextShape;
-	private int scale = 30;
-	private boolean swapStarted = false;
-	private boolean nextStarted = false;
 	private boolean needToRequestFocus = false;
 	private boolean justStarted = true;
 	private ArrayList<GameState> replay;
 	private int oldLinesCleared = 0;
 	private HeuristicAI ai;
 	private boolean germanMode = false;
-	/**
-	 * Launch the application.
-	 */
+
 	public void linkShapeScreen(AuxShapeBoard asb) {
 		if (this.swapShape == null) {
 			this.swapShape = asb;
@@ -57,11 +47,7 @@ public class GameWindow extends JFrame {
 		} else if (this.nextShape == null) {
 			this.nextShape = asb;
 	        this.needToRequestFocus = true;		       
-		
 
-
-	       // this.engine.pause();
-		    // this.requestFocus();
 			this.swapShape.updateScreen(new int[4][4]);
 			int[][] swapSpace = this.engine.getSwapBoard();
 			int[][] nextShape = this.engine.getNextShapeBoard();
@@ -134,7 +120,6 @@ public class GameWindow extends JFrame {
 	private void updateSwap() {
 		if (this.swapShape == null || this.nextShape == null) {
 			this.needToRequestFocus = true;
-			this.swapStarted = true; // so only one swap window is drawn
 			int scale = (int) (this.gameBoard.getSquareSize()*1.6);	
 	        int w = this.getWidth();
 	        Point location = this.getLocation();

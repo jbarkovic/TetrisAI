@@ -1,13 +1,12 @@
 package interfaces.gui;
 
 import javax.swing.JPanel;
-import java.awt.BasicStroke;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.geom.AffineTransform;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -15,85 +14,85 @@ import java.awt.event.MouseEvent;
 import tetris.engine.mechanics.*;
 
 public class Board extends JPanel {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4336635610825775081L;
 	private int rows;
 	private int columns;
 	private int squareDimension;
 	private int xStartPosition;
-	private int yStartPosition;
 	private int w;
 	private int h;
 	private Rectangle[][] gameArray;
-	private int[][] gameState;
-	private int[][] changes;
+	private int[][][] gameState;
 	private boolean initializedYet = false;
 	private Engine engine;
-	Graphics2D g2;
-	/**
-	 * Create the panel.
-	 */
+
     public void paint(Graphics g)
     {
       super.paint(g);
       boolean resized = false;
 
-      this.g2 = (Graphics2D) g;
+      Graphics2D g2 = (Graphics2D) g;
 
       RenderingHints rh =
-            new RenderingHints(RenderingHints.KEY_ANTIALIASING,
+            new RenderingHints(RenderingHints.KEY_ANTIALIASING,            				   
                                RenderingHints.VALUE_ANTIALIAS_ON);
 
       rh.put(RenderingHints.KEY_RENDERING,
              RenderingHints.VALUE_RENDER_QUALITY);
 
-      this.g2.setRenderingHints(rh);
+    //g2.setRenderingHints(rh);
       
       if (this.getWidth() != this.w || this.getHeight() != h) {
     	  resized = true;
+          this.w = this.getWidth();
+          this.h = this.getHeight();
       }
-      this.w = this.getWidth();
-      this.h = this.getHeight();
 
       if (this.initializedYet) {
           if (resized) {
               System.out.println("Resize");
-              this.resizeBoard();
+              this.resizeBoard(g2);
           } else {
-        	  this.updateSpaces();
+        	  this.updateSpaces(g2);
           }
       } else {
-    	  init();
+    	  init(g2);
       }
-
     }
     public double getSquareSize() {
     	return this.squareDimension;
     }
-    private void resizeBoard() {
+    private void resizeBoard(Graphics2D g2) {
         this.squareDimension = (int) this.w/this.columns;
         while (this.squareDimension*this.rows > this.h) {
       	  this.squareDimension--;
         }       
         this.xStartPosition = (int) ((this.w - this.columns*this.squareDimension)/2);
-        System.out.println("This square dimension: " + this.squareDimension);       
+        System.out.println("Square size: " + this.squareDimension + " x " + this.squareDimension);       
         for (int row=0;row<this.rows;row++) {
-        	  for (int column=0;column<this.columns;column++) {
-        		  this.gameArray[row][column] = new Rectangle(this.xStartPosition + column*this.squareDimension,row*this.squareDimension,this.squareDimension,this.squareDimension);      		        	
+        	  for (int col=0;col<this.columns;col++) {
+        		  this.gameArray[row][col] = new Rectangle(this.xStartPosition + col*this.squareDimension,row*this.squareDimension,this.squareDimension,this.squareDimension);      		        	
         	  }
           }
-        this.updateSpaces();
+        this.updateSpaces(g2);
         this.repaint();
     }
-    private void updateSpaces() {
+    private void updateSpaces(Graphics2D g2) {
+        Rectangle clipBounds = g2.getClipBounds();
   		for (int row=0;row<this.rows;row++) {
-  			for (int column=0;column<this.columns;column++) {
-  					this.g2.setColor(this.getColor(gameState[row][column]));
-  					this.g2.fill(this.gameArray[row][column]);
+  			for (int col=0;col<this.columns;col++) {
+  				if (clipBounds.contains(this.gameArray [row][col])) {
+  					g2.setColor(this.getColor(gameState[row][col][0]));
+  					g2.fill(this.gameArray[row][col]);
+  				}
   			}
   		}
     }
-    public void init() {
-
-    	this.resizeBoard();
+    public void init(Graphics2D g2) {
+    	this.resizeBoard(g2);
         this.initializedYet = true;
     }
     public Color getColor(int colorVal) {
@@ -111,8 +110,18 @@ public class Board extends JPanel {
     	}
     }
     public void updateScreen(int[][] gameState) {
-    	this.gameState = gameState;
-    	this.repaint();
+    	for (int row=0;row<this.gameState.length;row++) {
+    		for (int col=0;col<this.gameState[row].length;col++) {
+				this.gameState [row][col][0] = gameState [row][col];
+    			if (this.gameArray != null && this.gameArray [0] != null) {
+    				if (this.gameState [row][col][0] != this.gameState [row][col][1]) {
+    					this.gameState [row][col][1] = this.gameState [row][col][0];
+    					this.repaint(this.gameArray[row][col]);  				
+    				}
+    			}
+    		}
+    	}
+    	
     }
     private int[] getGameCoordsOfPoint(int x,int y) {
     	int[] coords = new int[] {-1,-1};
@@ -127,6 +136,16 @@ public class Board extends JPanel {
     private void setSpaceInEngine(int row,int col) {
     	this.engine.colorSpace(row,col);
     }
+    private void initializeGameState (int rows, int cols) {
+    	this.gameState = new int [rows][cols][2];
+    	for (int row=0;row<rows;row++) {
+    		for (int col=0;col<cols;col++) {
+    			// Set them different to force a redraw
+    			this.gameState [row][col][0] = 0;
+    			this.gameState [row][col][1] = 1;
+    		}
+    	}
+    }
 	public Board(int rows, int columns,double initialSquareSize) {
 
 		this.rows = rows;
@@ -135,9 +154,8 @@ public class Board extends JPanel {
 		int dimy = (int)(this.rows*ss);
 		int dimx = (int)(this.columns*ss);
 		this.setPreferredSize(new Dimension(dimx,dimy));
-		this.gameState = new int[rows][columns];
+		initializeGameState (rows, columns);
         this.gameArray = new Rectangle[this.rows][this.columns];
-        this.changes = new int[rows][columns];
         this.setDoubleBuffered(true);
         this.setIgnoreRepaint(true);			
 	}
@@ -149,9 +167,8 @@ public class Board extends JPanel {
 		int dimy = (int)(this.rows*ss);
 		int dimx = (int)(this.columns*ss);
 		this.setPreferredSize(new Dimension(dimx,dimy));
-		this.gameState = new int[rows][columns];
+		initializeGameState (rows, columns);
         this.gameArray = new Rectangle[this.rows][this.columns];
-        this.changes = new int[rows][columns];
         this.setDoubleBuffered(true);
         this.setIgnoreRepaint(true);
 		addMouseListener(new MouseAdapter() {

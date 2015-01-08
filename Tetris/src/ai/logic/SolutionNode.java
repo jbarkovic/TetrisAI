@@ -50,7 +50,7 @@ public class SolutionNode {
 	
 	private final static Logger LOGGER = Logger.getLogger(SolutionNode.class.getName());
 	static {
-		LOGGER.setLevel(Level.INFO);		
+		LOGGER.setLevel(Level.SEVERE);		
 	}
 	
 	public enum SolutionDir {
@@ -82,11 +82,19 @@ public class SolutionNode {
 		if (this.parentToUs == (SolutionDir.START)) {
 			LOGGER.info("START");
 			GameState.dumpState(this.ourState, true);
-			/**GameState dropState = ShapeTransforms.predictCompleteDrop(new GameState (this.ourState));
-			if (Arrays.deepEquals(this.ourState.getBoardWithCurrentShape().getState(),dropState.getBoardWithCurrentShape().getState())) {
+			GameState dropState = ShapeTransforms.predictCompleteDrop(new GameState (this.ourState));
+			boolean same = false;
+			for (int row=0;row<4;row++) {
+				for (int col=0;col<2;col++) {
+					System.out.println("{OUR[0]: " + this.ourState.getShape().getCoords()[0][0] + ",DROP: " + dropState.getShape().getCoords()[0][0]);
+					
+					same = same && (this.ourState.getShape().getCoords()[row][col] == dropState.getShape().getCoords()[row][col]);
+				}
+			}
+			if (same) {
 				LOGGER.warning("ARRAYS ARE EQUAL< THEY SHOULD NOT BE!!");
 			}
-			int[] params = SolutionValue.getSolutionParameters(dropState);
+			/**int[] params = SolutionValue.getSolutionParameters(dropState);
 			SolutionValue.calculateSolution(this.ourState, params, false);
 			message = SolutionMaster.solutionText + "\n";
 			for (int i=0;i<4;i++) {
