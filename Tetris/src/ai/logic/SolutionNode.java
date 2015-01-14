@@ -328,6 +328,10 @@ public class SolutionNode {
 			if (this.distD  < bestDistance && this.d.getSolutionVal()  == this.ourSolution) {directionCheck &= 0; bestDistance = this.distD;  this.next = this.d;this.nextMove  = SolutionDir.DOWN;}
 		}
 		LOGGER.info("bestDistance: " + bestDistance + " this.OurSolution: " + this.ourSolution + " , this.solFinal: " + this.solFINAL+ " ThisnextMove: " + this.nextMove.toString() + " our coords: " + Arrays.toString(this.ourState.getShape().getCoords()[0]) + Arrays.toString(this.ourState.getShape().getCoords()[1]) + Arrays.toString(this.ourState.getShape().getCoords()[2]) + Arrays.toString(this.ourState.getShape().getCoords()[3]));
+		if (this.nextMove == SolutionDir.PLUMMIT) {
+			directionCheck &= 0;
+			nullCheck = 1;
+		}
 		switch (this.nextMove) {
 			//TODO replace {0,0,-1}arrays with enums and/or constants defined in Solution Master;
 			case LEFT : 	{ solutionPattern[solutionPatternPointer++] = new int[] {0,-1,0}; /**LOGGER.info("LEFT")**/; break;}

@@ -55,6 +55,9 @@ public class HeuristicAI {
 		}
 
 		public HeuristicAI() {
+			this (30);
+		}
+		public HeuristicAI(int AISpeed) {
 
 			this.holdUpdates = false;
 			this.stopped = true;
@@ -62,7 +65,7 @@ public class HeuristicAI {
 			this.usePlummit = false;
 			this.waitStep = false;
 			this.emergencyShiftAmount = 0;
-			this.delay = 30;		
+			this.delay = AISpeed;		
 			Stepper.start(this.delay,this);
 
 		}

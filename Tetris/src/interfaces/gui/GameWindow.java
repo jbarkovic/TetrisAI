@@ -173,14 +173,14 @@ public class GameWindow extends JFrame {
 	public void probeSolution () {
 		this.ai.testSolution(this.engine);
 	}
-	private static void createAI(Engine engine, GameWindow gw) {
+	private static void createAI(Engine engine, GameWindow gw, final int AISpeed) {
 		final Engine eng = engine;
 		final GameWindow gwin = gw;
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					HeuristicAI ai = new HeuristicAI();
-						gwin.connectAI(ai);
+					HeuristicAI ai = new HeuristicAI(AISpeed);
+					gwin.connectAI(ai);
 					
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -208,60 +208,81 @@ public class GameWindow extends JFrame {
 		System.out.println("Loading...");
 		final String[] dim = args;
 		final int DEFAULTROWS = 16;
-		final int DEFAULTCOLUMNS = 10;		
+		final int DEFAULTCOLUMNS = 10;
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
+				int AISpeed = 40;
 				String historyFile = null; 
 				try {
+					int rows = DEFAULTROWS;
+					int columns = DEFAULTCOLUMNS;
 					int logLevel = 0;
-					try {
-						logLevel = Integer.parseInt(dim[2]);					
-					} catch (ArrayIndexOutOfBoundsException e0) {						
-					} catch (NullPointerException e1) {						
-					} catch (NumberFormatException e2) {
-						try {
-							historyFile = dim [2];
-						} catch (ArrayIndexOutOfBoundsException e3) {}
-							
+					for (int i=0;i<dim.length;i++) {
+						if (dim [i].equals("-l")) {
+							try {
+								i++;
+								logLevel = Integer.parseInt(dim[2]);									
+							} catch (ArrayIndexOutOfBoundsException e0) {						
+							} catch (NullPointerException e1) {						
+							} catch (NumberFormatException e2) {
+								try {
+									historyFile = dim [2];
+								} catch (ArrayIndexOutOfBoundsException e3) {}
+									
+							}
+							Level level = Level.OFF;
+							switch (logLevel) {
+							case 0 : {level = Level.OFF; break;}
+							case 1 : {level = Level.SEVERE; break;}
+							case 2 : {level = Level.WARNING; break;}
+							case 3 : {level = Level.INFO; break;}
+							case 4 : {level = Level.FINE; break;}
+							case 5 : {level = Level.FINER; break;}
+							case 6 : {level = level.FINEST; break;}
+							case 7 : {level = level.CONFIG; break;}
+							case 8 : {level = level.ALL; break;}
+							default : {
+								level = level.ALL;
+								break;
+								}
+							}
+							TetrisLogger.setup(level);
+						}
+						else if (dim [i].equals("-t")) {
+							try {
+								int speed = Integer.parseInt(dim [i+1]);
+								System.out.println("AI Speed: " + speed);
+								AISpeed = speed;
+							} catch (NumberFormatException e2) {
+								System.out.println("option -t (AI SPEED) requires an integer argument, usually 30 <= i <= 100");
+							}
+						}
+						else if (dim [i].equals("-s")) {
+							try {
+								try {
+									rows = Integer.parseInt(dim[i+1]);
+									columns = Integer.parseInt(dim[i+2]);
+									i += 2;
+								} catch (ArrayIndexOutOfBoundsException e0) {
+									rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
+								} catch (NullPointerException e1) {
+									rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
+								} catch (NumberFormatException e2) {
+									rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
+								} finally {
+									//frame.updateScreen();
+								}
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
 					}
-					Level level = Level.OFF;
-					switch (logLevel) {
-					case 0 : {level = Level.OFF; break;}
-					case 1 : {level = Level.SEVERE; break;}
-					case 2 : {level = Level.WARNING; break;}
-					case 3 : {level = Level.INFO; break;}
-					case 4 : {level = Level.FINE; break;}
-					case 5 : {level = Level.FINER; break;}
-					case 6 : {level = level.FINEST; break;}
-					case 7 : {level = level.CONFIG; break;}
-					case 8 : {level = level.ALL; break;}
-					default : {level = level.ALL; break;}
-					}
-					TetrisLogger.setup(level);
+					GameWindow frame = new GameWindow(rows,columns, historyFile, AISpeed);
+					frame.setVisible(true);
 				} catch (IOException e) {
 					e.printStackTrace();
-					System.err.println("ERROR: Failed to initialize logging system. Will exit.");
+					System.err.println("ERROR: Failed to start game.");
 					throw new RuntimeException ();
-				}
-				try {
-					int rows = 8;
-					int columns = 8;
-					try {
-						rows = Integer.parseInt(dim[0]);
-						columns = Integer.parseInt(dim[1]);
-					} catch (ArrayIndexOutOfBoundsException e0) {
-						rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
-					} catch (NullPointerException e1) {
-						rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
-					} catch (NumberFormatException e2) {
-						rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
-					} finally {
-						GameWindow frame = new GameWindow(rows,columns, historyFile);
-						frame.setVisible(true);
-						//frame.updateScreen();
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		});
@@ -270,7 +291,7 @@ public class GameWindow extends JFrame {
 	/**
 	 * Create the frame."ERROR: SolutionNode: Owner not found"
 	 */
-	public GameWindow(int rows, int columns, String historyFile) {
+	public GameWindow(int rows, int columns, String historyFile, int AISpeed) {
 
 		int scale = 30;
 		System.out.println("Starting.. ");
@@ -294,7 +315,7 @@ public class GameWindow extends JFrame {
         setVisible(true);
         setResizable(true);
         this.gameState = new int[rows][columns];        
-        this.createAI(this.engine, this);
+        this.createAI(this.engine, this, AISpeed);
         this.requestFocus();
 		this.addKeyListener(new KeyAdapter() {
 			private boolean holdInput = false;
