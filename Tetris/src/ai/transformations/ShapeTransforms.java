@@ -3,6 +3,7 @@ package ai.transformations;
 import java.util.logging.Logger;
 
 import tetris.engine.shapes.SHAPETYPE;
+import ai.logic.HeuristicAI;
 import ai.logic.SolutionMaster;
 import ai.state.*;
 
@@ -26,24 +27,28 @@ public class ShapeTransforms {
 			}
 			inState.setCurrentShape(newCurrentShape);
 		}
+		if (HeuristicAI.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictDropOnce (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[0]++;
 		}
+		if (HeuristicAI.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictShiftRight (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[1]++;
 		}
+		if (HeuristicAI.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictShiftLeft (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[1]--;
 		}
+		if (HeuristicAI.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictCompleteDrop(GameState inState) {
@@ -69,6 +74,7 @@ public class ShapeTransforms {
 		} else {
 			LOGGER.severe("Displacement Error in predict complete drop");
 		}
+		if (HeuristicAI.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static int[] getShapeLimits(GameState inState) { // returns {minCol,MaxCol,MinRow,MaxRow)

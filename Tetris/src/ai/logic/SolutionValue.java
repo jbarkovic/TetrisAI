@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import ai.state.GameState;
 import ai.state.SHAPETYPE;
+import ai.transformations.ShapeTransforms;
 
 public class SolutionValue {
 	
@@ -21,10 +22,12 @@ public class SolutionValue {
 	/** RD = config[5];  ==> Roughness Delta		**/
 	/** BF = config[6];  ==> Buried Factor  		**/
 	/** BG = config[7];  ==> Bad Gap Beside Shape	**/
+	/** CF = config[7];  ==> Bad Gap Beside Shape	**/
 	
-	protected static double AC, MB, EC, DG, RC, RD, BF, BG;
-	protected static double[] defaults = new double[] {10,10,10,1, 2.5, 3, 1,2.5};
-	//protected static double[] defaults = new double[] {10,10,10,1, 2.5, 3, 1,5}; Holly shit 95 000
+	protected static double AC, MB, EC, DG, RC, RD, BF, BG, CF;
+	//protected static double[] defaults = new double[] {10,10,10,1, 2.5, 3, 1,2.5, 2.};
+	protected static double[] defaults = new double[] {10,12,10,1, 2.5, 3, 1,5,0};
+	//protected static double[] defaults = new double[] {10,11,10,1, 2.5, 3, 1,5,0}; //Holly shit 95 000
 	//protected static double[] defaults = new double[] {4,9,5,1, 2, 0, 0,1};
 	//protected static double[] defaults = new double[] {5,5,65,0,1,0 , 1,0};	
 	//protected static double[] defaults = new double[] {10,10,8,1,0,0 , 1,0};	
@@ -83,6 +86,7 @@ public class SolutionValue {
 			RD = config[5];  /** Roughness Delta		**/
 			BF = config[6];  /** Buried Factor  		**/
 			BG = config[7];  /** Bad Gap Beside Shape	**/
+			CF = config[8];
 		} catch (Exception e) {			// likely either ArrayIndexOutOfBounds or NullPointer Exceptions
 			LOGGER.severe("Could not load optimized configuration into AI, using equal weightings... god speed");
 			AC = 1.0;
@@ -93,6 +97,7 @@ public class SolutionValue {
 			RD = 1.0;
 			BF = 1.0;
 			BG = 1.0;
+			CF = 1.0;
 		}
 		LOGGER.info("AC : " + AC);
 		LOGGER.info("MB : " + MB);
@@ -114,6 +119,7 @@ public class SolutionValue {
 		int percentDown = parameters[6];
 		int buriedFactor = parameters[7];
 		int badGapBesideShape = parameters[8];
+		int coveredFactor = parameters [9];
 		int val = -90000000;
 		double bonus = 0;
 		//int [][] gB = this.getGameBoard();
@@ -132,7 +138,7 @@ public class SolutionValue {
 			}
 			bonus += distanceFromBottom;
 		} else if (inState.getShape().getType() == SHAPETYPE.O) {
-			bonus -= missingBelow;
+			bonus -= MB*missingBelow;
 		} else {		
 			/**if (percentDown < 33 || distanceFromBottom < 5) {
 				bonus += 3*EC*numRowsThatWillClear;
@@ -140,8 +146,9 @@ public class SolutionValue {
 				bonus += 2*EC;
 			}**/
 		}	
+		//System.out.println (inState.getShape().getType() + ": Covered factor: " + coveredFactor);
 		val = (int) ((int) bonus + AC*adjacentCount - (MB)*missingBelow + EC*edgeCount - BF*buriedFactor);
-		SolutionMaster.solutionText = "HIGHLIGHTED SOLUTION = " + val + "\n= bonus + AC*adjacentCount - MB*missingBelow + EC*edgeCount + DG*distanceFromTop + RC*numRowsThatWillClear \n" +
+	/*	SolutionMaster.solutionText = "HIGHLIGHTED SOLUTION = " + val + "\n= bonus + AC*adjacentCount - MB*missingBelow + EC*edgeCount + DG*distanceFromTop + RC*numRowsThatWillClear \n" +
 				"AC = " + AC + " MB = " + MB + " EC = " + EC + " DG " + DG + " RC = " + RC + "\n" +
 				"\nbonus = " + bonus +
 				"\nadjacentCount = " + adjacentCount + 
@@ -152,15 +159,15 @@ public class SolutionValue {
 				"\nroughness = " + roughness +
 				"\nburiedFactor = " + buriedFactor +
 				"\nbadGapBesideShape = " + badGapBesideShape + 
-				"\n\n";	
+				"\ncoveredfactor = " + coveredFactor +
+				"\n\n";*/	
 		//System.out.println(this.solutionText);
+		val += RC*numRowsThatWillClear;
 		val += Math.abs (RC*numRowsThatWillClear*(missingBelow - 1));
 		
-		if (missingBelow == 0) {
-			//val *= RC*numRowsThatWillClear; 
-		}
 		/* Scale the result by the height of the board */ 
 		//val += Math.abs (val * inState.getBoardSize() [0]);
+		val *= (CF > 0 && coveredFactor > 0) ? coveredFactor : 1;
 		val -= ((int)DG*100*((double) distanceFromBottom / (double) inState.getBoardSize() [0]));		
 		return val;
 	}
@@ -249,7 +256,22 @@ public class SolutionValue {
 //		return new int[] {adjacentCount,0,0,0,0,0, 0}; // two times edge count so the edges are taken before others
 		int buriedFactor = getBurriedFactor (inState);
 		int badGapBesideShape = getBadGapBesideShape (inState);
-		return new int[] {adjacentCount,missingBelow,edgeCount,distanceToGround,numRowsThatWillClear,roughness, percentDown, buriedFactor, badGapBesideShape}; // two times edge count so the edges are taken before others
+		int coveredFactor = getCoveredFactor (inState);
+		return new int[] {adjacentCount,missingBelow,edgeCount,distanceToGround,numRowsThatWillClear,roughness, percentDown, buriedFactor, badGapBesideShape, coveredFactor}; // two times edge count so the edges are taken before others
+	}
+	private static int getCoveredFactor (GameState inState) {
+		int gB [][] = inState.getBoardWithCurrentShape().getState();
+		int coveredFactor = 0;
+		for (int [] shCoord : inState.getShape().getCoords()) {
+			int numSolid = 0;
+			for (int row = shCoord[0]-1;row>=0;row--) {
+				if (ShapeTransforms.isCoordPartOfCurrentShape(inState, new int [] {row,shCoord[1]})) continue;
+				if (gB[row][shCoord[1]] != 0) numSolid++;
+				else continue;
+			}
+			coveredFactor += numSolid;
+		}
+		return coveredFactor;
 	}
 	private static int getBurriedFactor (GameState inState) {
 		int gB [][] = inState.getBoardWithCurrentShape().getState();

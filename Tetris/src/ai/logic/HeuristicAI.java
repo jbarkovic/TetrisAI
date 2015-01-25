@@ -24,7 +24,8 @@ import java.util.logging.Logger;
 public class HeuristicAI {
 		private boolean holdUpdates;
 		private boolean stopped;
-		private boolean usePlummit;
+		private boolean usePlummit; // not used
+		public static boolean plummit; 
 		private boolean stillDeciding;
 		private boolean waitStep = false;
 		private boolean expectingASwap;
@@ -55,11 +56,12 @@ public class HeuristicAI {
 		}
 
 		public HeuristicAI() {
-			this (30);
+			this (30, false);
 		}
-		public HeuristicAI(int AISpeed) {
+		public HeuristicAI(int AISpeed, boolean usePlummit) {
 
 			this.holdUpdates = false;
+			plummit = usePlummit;
 			this.stopped = true;
 			this.stillDeciding = false;
 			this.usePlummit = false;
@@ -113,7 +115,8 @@ public class HeuristicAI {
 		public boolean isRunning() {
 			return !this.stopped;
 		}
-		public void step() {	
+		public void step() {
+			System.out.println ("step");
 			if (this.stopped) {
 				this.waitStep = false;
 				return;
@@ -145,14 +148,8 @@ public class HeuristicAI {
 				//if (!this.testingSolutions)  this.logState("");
 			} else {			
 				if (this.expectingAChange) {
-				//	if (!this.testingSolutions) this.logState("");
-					//LOGGER.warning("Caught a change we were expecting! ");
-					//this.expectingAChange = false;
 					return;
 				}
-				//this.abortSolution();
-				//LOGGER.warning("Somebody's been sleeping in my bed..."); // when the user or game gravity have moved the shape
-				//this.decide(true);
 			}
 			this.waitStep = false;
 		}	
@@ -190,14 +187,18 @@ public class HeuristicAI {
 			}
 		}
 		private int decide(boolean takeRisks) {
+			System.out.println ("deciding");
 			int val = 1;
 			if (this.stillDeciding) {
+				System.out.println ("Was still deciding");
 				return 0;		
 			} else {	
+				System.out.println("Working");
 				this.stillDeciding = true; // so were not interrupted
 				this.solutionPointer = -1;
 				this.abortSolution();
 
+				System.out.println ("About to work");
 				GameState currentState = new GameState ();
 				currentState.setState(new BoardState (this.gameBoard), new ShapeState (this.engine.getCoordsOfCurrentShape(), this.engine.getCurrentShape()));
 				for (int c=0;c<this.engine.getGameBoard()[0].length;c++) {
@@ -207,23 +208,7 @@ public class HeuristicAI {
 				System.out.println("AI DUMPING...");
 				GameState.dumpState(currentState, true);
 				Solution solutionNoSwap = this.solMaster.solve(currentState, false, false, 1);					
-				//				if (this.enableSwap) {
-				//					int weightSwap		= this.solMaster.solve(this.engine.getSwapShape(), true);
-				//					if (weightSwap > -99999) {
-				//						if (weightSwap > weightValNoSwap+1) {
-				//							this.expectingASwap = true;
-				//							this.solution = new int[0][0];
-				//							this.stillDeciding = false;
-				//							this.doASwap = true;
-				//						
-				//							return 0;
-				//						} else {
-				//							this.solution = solNoSwap;
-				//						}
-				//					} else {
-				//						this.solution = solNoSwap;
-				//					}
-				//				} else {
+
 				this.solution = (int[][]) solutionNoSwap.steps.toArray(new int[][] {});
 				//	}
 				this.solutionPointer = -1;
@@ -232,10 +217,12 @@ public class HeuristicAI {
 
 				this.stillDeciding = false; // now we can be interrupted
 				this.finishSolution();
+				System.out.println ("Done working");
 				return val;
 			}			
 		}	
 		public String dumpSolution(String[] messages, boolean printToOutput) {
+			if (!printToOutput ) return "not logging";
 			String message = "";
 			if (this.solution.length == 0) {LOGGER.warning("AI -> dumpSolution:Zero length Solution!");return "";}
 			if (printToOutput) {
@@ -344,7 +331,6 @@ public class HeuristicAI {
 				if (patt[0] > 0) {
 					for (int rotate=0;rotate<patt[0];rotate++) {
 						this.expectingAChange = true;		
-						LOGGER.warning("rotateCW...");
 						if(this.engine.forceRotate ()) {
 							this.dumpSolution(new String[] {"Rotate Clockwise"},true);
 							//this.stop();
@@ -353,7 +339,6 @@ public class HeuristicAI {
 					}
 				} 
 				else if (patt[0] < 0){
-					LOGGER.warning("Shift rotate...");
 					int r = -patt[0];
 					for (int rotate=0;rotate<r;rotate++) {	
 						this.expectingAChange = true;
@@ -363,7 +348,6 @@ public class HeuristicAI {
 				}
 				if (patt[1] > 0) {
 					for (int shift=0;shift<patt[1];shift++) {
-						LOGGER.warning("Shift right...");
 						this.expectingAChange = true;
 						this.engine.forceShiftRight();
 						this.expectingAChange = false;
@@ -371,21 +355,18 @@ public class HeuristicAI {
 				} 
 				else {
 					for (int shift=0;shift>patt[1];shift--) {
-						LOGGER.warning("Shift left...");
 						this.expectingAChange = true;
 						this.engine.forceShiftLeft();
 						this.expectingAChange = false;
 					} 
 				}
 				if (patt[2] < 0) {
-					LOGGER.warning("plummit...");
 					this.expectingAChange = true;
 					this.engine.plummit();
 					this.expectingAChange = false;
 				}
 				else {
 					for (int drop=0;drop<patt[2];drop++) {
-						LOGGER.warning("drop...");
 						this.expectingAChange = true;
 						this.engine.dropShape();
 						this.expectingAChange = false;

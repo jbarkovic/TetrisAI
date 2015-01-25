@@ -34,6 +34,7 @@ public class GameWindow extends JFrame {
 	private int oldLinesCleared = 0;
 	private HeuristicAI ai;
 	private boolean germanMode = false;
+	String [] args = null;
 
 	public void linkShapeScreen(AuxShapeBoard asb) {
 		if (this.swapShape == null) {
@@ -152,7 +153,8 @@ public class GameWindow extends JFrame {
 		this.engine.enableDropShadow(!this.engine.getDropShadowEnabled());
 	}
 	public void newGame() {
-		this.main(new String[] {Integer.toString(this.gameState.length),Integer.toString(this.gameState[0].length)});
+		if (this.args != null) this.main(args);
+		else this.main(new String[] {Integer.toString(this.gameState.length),Integer.toString(this.gameState[0].length)});
 		this.nextShape.dispose();
 		this.swapShape.dispose();
 		this.dispose();
@@ -173,13 +175,13 @@ public class GameWindow extends JFrame {
 	public void probeSolution () {
 		this.ai.testSolution(this.engine);
 	}
-	private static void createAI(Engine engine, GameWindow gw, final int AISpeed) {
+	private static void createAI(Engine engine, GameWindow gw, final int AISpeed, final boolean plummit) {
 		final Engine eng = engine;
 		final GameWindow gwin = gw;
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					HeuristicAI ai = new HeuristicAI(AISpeed);
+					HeuristicAI ai = new HeuristicAI(AISpeed, plummit);
 					gwin.connectAI(ai);
 					
 				} catch (Exception e) {
@@ -211,14 +213,17 @@ public class GameWindow extends JFrame {
 		final int DEFAULTCOLUMNS = 10;
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
-				int AISpeed = 40;
+				int AISpeed = 50;
 				String historyFile = null; 
 				try {
 					int rows = DEFAULTROWS;
 					int columns = DEFAULTCOLUMNS;
 					int logLevel = 0;
+					boolean plummit = false;
 					for (int i=0;i<dim.length;i++) {
-						if (dim [i].equals("-l")) {
+						if (dim [i].equals("-plummit")) {
+							plummit = true;
+						} else if (dim [i].equals("-l")) {
 							try {
 								i++;
 								logLevel = Integer.parseInt(dim[2]);									
@@ -277,8 +282,9 @@ public class GameWindow extends JFrame {
 							}
 						}
 					}
-					GameWindow frame = new GameWindow(rows,columns, historyFile, AISpeed);
+					GameWindow frame = new GameWindow(rows,columns, historyFile, AISpeed, plummit);
 					frame.setVisible(true);
+					frame.args = dim;
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.err.println("ERROR: Failed to start game.");
@@ -291,7 +297,7 @@ public class GameWindow extends JFrame {
 	/**
 	 * Create the frame."ERROR: SolutionNode: Owner not found"
 	 */
-	public GameWindow(int rows, int columns, String historyFile, int AISpeed) {
+	public GameWindow(int rows, int columns, String historyFile, int AISpeed, boolean plummit) {
 
 		int scale = 30;
 		System.out.println("Starting.. ");
@@ -315,7 +321,7 @@ public class GameWindow extends JFrame {
         setVisible(true);
         setResizable(true);
         this.gameState = new int[rows][columns];        
-        this.createAI(this.engine, this, AISpeed);
+        this.createAI(this.engine, this, AISpeed, plummit);
         this.requestFocus();
 		this.addKeyListener(new KeyAdapter() {
 			private boolean holdInput = false;
@@ -437,6 +443,10 @@ public class GameWindow extends JFrame {
 					if (arg0.getKeyCode() == KeyEvent.VK_RIGHT) {
 						if(!this.holdInput)shiftRight();
 						if (germanMode) probeSolution();
+						return;
+					}
+					if (arg0.getKeyCode() == KeyEvent.VK_RIGHT) {
+						if(!this.holdInput)rotateClockwise();
 						return;
 					}
 					if (arg0.getKeyCode() == KeyEvent.VK_DOWN) {

@@ -53,6 +53,9 @@ public class GameState implements java.io.Serializable {
 	public String getMessage () {
 		return this.message;
 	}
+	public void invalidate () {
+		setState (this.boardWithoutCurrentShape, currentShape);
+	}
 	public static String dumpState (GameState inState, boolean printToOut) {
 		String message = "Game State Dump: \n";
 		for (int row = 0; row<inState.getBoardWithCurrentShape().getState().length;row++) {

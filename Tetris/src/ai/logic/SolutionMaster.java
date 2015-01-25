@@ -32,7 +32,7 @@ public class SolutionMaster {
 	private final static Logger LOGGER = Logger.getLogger(SolutionMaster.class.getName());
 	static {
 		LOGGER.setLevel(Logger.getGlobal().getLevel());		
-		LOGGER.setLevel(Level.INFO);	
+		LOGGER.setLevel(Level.SEVERE);	
 	}
 
 	public SolutionMaster () {
@@ -175,36 +175,6 @@ public class SolutionMaster {
 		}
 		return true;
 	}
-//	private boolean isPositionSubmerged(GameState inState) {
-//		int [][] gB = inState.getBoardWithCurrentShape().getState();
-//		int burriedCount = 0;
-//		for (int[] coord: inState.getShape().getCoords()) {
-//			for (int offset=1;offset<gB.length;offset++) {
-//				if (gB [coord[0]] [coord[1]] != 0) {
-//					if (!this.isCoordPartOfCurrentShape(coord) && !this.isCoordPartOfList(coord, shapeCoords)) {
-//						burriedCount++;
-//					}
-//				}
-//			}
-//		}
-//		if (burriedCount == shapeCoords.length) return true;
-//		return true;
-//	}
-	
-//	public boolean isEmpty(int row,int col) {
-//		int [][] gB = getGameBoard ();
-//		if (gB == null) return false;
-//		try {
-//			int valAt = gB[row][col];
-//			if (valAt != EMPTYCOLOR && valAt != SHADOWCOLOR) {
-//				return false;
-//			}		
-//			else return true;
-//		} catch (ArrayIndexOutOfBoundsException e) {
-//			return false;
-//		}
-//	}
-
 	public int[][] combineDropsInHistory(int[][] history) {
 		int[][] newHistory = null; // empty, don't worry, the method we call handles this
 		for (int i=0;i<history.length;i++) {

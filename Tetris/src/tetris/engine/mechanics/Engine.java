@@ -250,7 +250,7 @@ public class Engine implements Tetris{
 		return drop(true , true);		
 	}
 	private boolean drop(boolean frominside,boolean pushUpdate) { //returns true if collision, or done drop
-		LOGGER.info("Drop in Engine.java");
+		//LOGGER.info("Drop in Engine.java");
 		if (this.pause && !frominside) return false;
 		//if (this.dropDone) return true;	
 		//if (this.holdDrops) return false;
@@ -259,7 +259,7 @@ public class Engine implements Tetris{
 		boolean result = this.currentShape.drop();	
 		this.wasThereNewShape = false;
 		if (result) {
-			LOGGER.info("Drop Done in Engine");
+			//LOGGER.info("Drop Done in Engine");
 			this.dropDone = true;
 			this.manageFullRows();
 			newShape();			

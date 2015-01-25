@@ -86,7 +86,7 @@ public class SolutionNode {
 			boolean same = false;
 			for (int row=0;row<4;row++) {
 				for (int col=0;col<2;col++) {
-					System.out.println("{OUR[0]: " + this.ourState.getShape().getCoords()[0][0] + ",DROP: " + dropState.getShape().getCoords()[0][0]);
+					//System.out.println("{OUR[0]: " + this.ourState.getShape().getCoords()[0][0] + ",DROP: " + dropState.getShape().getCoords()[0][0]);
 					
 					same = same && (this.ourState.getShape().getCoords()[row][col] == dropState.getShape().getCoords()[row][col]);
 				}
@@ -232,7 +232,7 @@ public class SolutionNode {
 		this.solFINAL = NEGINF;		
 		int bestSolution = NEGINF;
 		// GET OUR SOLUTION AS IS
-		//if (this.d == null || this.r == null || this.l == null || this.r1 == null || this.r2 == null || this.r3 == null) {
+		if (this.d == null || this.r == null || this.l == null || this.r1 == null || this.r2 == null || this.r3 == null) {
 			GameState dropState = ShapeTransforms.predictCompleteDrop(new GameState (this.ourState));
 			int[] params = SolutionValue.getSolutionParameters(dropState);
 			this.solFINAL = SolutionValue.calculateSolution(this.ourState, params, false);
@@ -240,7 +240,7 @@ public class SolutionNode {
 			for (int [] coord : dropState.getShape().getCoords()) {
 				this.message += "{" + coord[0] + "," + coord[1] + "}";
 			}**/
-		//}
+		}
 		
 		// COMBINE SOLUTION
 		if (this.r  != null && this.r.hasFoundSolution()  && this.r.getSolutionVal()  >= bestSolution)  {bestSolution = this.r.getSolutionVal();}
