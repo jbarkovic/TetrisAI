@@ -13,20 +13,17 @@ public class ShapeState implements java.io.Serializable {
 		this.setState (old.getCoordsCopy(), old.type);
 	}
 	protected void setState (int [][] coords, SHAPETYPE type) {
-		int [][] copy = Arrays.copyOf(coords, coords.length);
-		for (int i=0;i<copy.length;i++) {
-			copy[i] = Arrays.copyOf(copy[i], copy[i].length);
-		}
-		this.coords = copy;
+		this.coords = coords;
+		this.coords = this.getCoordsCopy();
 		this.type = type;
 	}
 	public int [][] getCoords () {
 		return this.coords;
 	}
 	public int [][] getCoordsCopy () {
-		int [][] copy = Arrays.copyOf(this.coords, this.coords.length);
+		int [][] copy = new int [this.coords.length][2];
 		for (int i=0;i<copy.length;i++) {
-			copy[i] = Arrays.copyOf(copy[i], copy[i].length);
+			copy[i] = new int [] {this.coords[i][0], this.coords[i][1]};
 		}
 		return copy;	
 	}
@@ -37,5 +34,15 @@ public class ShapeState implements java.io.Serializable {
 		for (int [] c : this.coords)
 			if (c[0] == coord[0] && c[1] == coord[1]) return true;		
 		return false;
+	}
+	public boolean equals (ShapeState other) {
+		if (this.type == other.type) {
+			if (this.coords.length == other.coords.length) {
+				for (int i=0;i<this.coords.length;i++) {
+					if (!Arrays.equals(this.coords[i], other.coords[i])) return false;
+				}
+			}
+		}
+		return true;
 	}
 }

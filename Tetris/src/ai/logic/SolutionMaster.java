@@ -26,6 +26,7 @@ import ai.transformations.ShapeTransforms;
 public class SolutionMaster {
 	static String solutionText = "";
 	private final EngineInterface engine;
+	NodeTracker tracker;
 	
 	private Journal journal;
 	
@@ -46,6 +47,7 @@ public class SolutionMaster {
 	public SolutionMaster (EngineInterface engine,String configFile) {		//	 this was added to facilitate tweaking of the weighting function coefficients
 		this.engine = engine;
 		SolutionValue.loadConfiguration(configFile);
+		tracker = new NodeTracker();
 	}
 	public Solution solve(GameState inState, boolean notCurrentShape, boolean testOnly) {
 		return solve(inState,notCurrentShape,testOnly,1);
@@ -61,13 +63,8 @@ public class SolutionMaster {
 		if (futureSteps < 1) futureSteps = 1;
 		if (notCurrentShape && !RotationManager.doWeKnowShapeYet(inState.getShape().getType())) return new Solution ();
 
-
-		//knownSolutionNodes = new ArrayList<SolutionNode> ();  			// this is very important for correct operation without re-instantiation each time
 		GameState ours = new GameState ();
-		ours.setState(inState.getBoardWithoutCurrentShape(), new ShapeState (RotationManager.learnShape(inState, this.engine, notCurrentShape),inState.getShape().getType()));
-	//	System.out.println("Solution Master Dumping: \n");
-	//	ours.dumpState(ours, true);
-		// get start coords. for "hypothetical" shape
+		ours.setState(inState.getBoardWithoutCurrentShape(), new ShapeState (RotationManager.learnShape(inState, this.engine, notCurrentShape),inState.getShape().getType()));// get start coords. for "hypothetical" shape
 
 		if (testOnly) {
 			ShapeTransforms.predictCompleteDrop(ours);
@@ -75,9 +72,14 @@ public class SolutionMaster {
 			System.out.println(solutionText);
 			return new Solution ();
 		} else {
-			SolutionNode start = new SolutionNode(inState, null,SolutionNode.SolutionDir.START);
-			retVal.setValue(start.Solve());
+			tracker.track(ours);
+			tracker.parallelSolve();
+			retVal = tracker.buildSolution();
+			//SolutionNode start = new SolutionNode(inState, null,SolutionNode.SolutionDir.START);
+			//retVal.setValue(start.Solve());
+			/*
 
+			
 			LOGGER.info("SolutionMaster: -> solutionVal: "+ retVal.getValue());
 			//TRAVERSE SOLUTION
 			if (isTopLevel) {
@@ -91,7 +93,7 @@ public class SolutionMaster {
 				}
 			} else {
 				//this.start.followSolution();
-			}
+			}*/
 			//		if (futureSteps > 1 && futureSteps < IMAGINARY_DEPTH) {
 			//			this.putImaginaryShape = true;
 			//			int valO = 0;
