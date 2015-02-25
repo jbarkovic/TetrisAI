@@ -399,14 +399,6 @@ public class SolutionNode {
 			output[i][1] = solutionPattern[i][1];
 			output[i][2] = solutionPattern[i][2];
 		}
-		LOGGER.info("Solution as it left solution node...");
-		String message = "";
-		for (int[] step : output) {
-			message += "  {"+step[0]+","+step[1]+","+step[2]+"},\n";
-		}
-		LOGGER.info(message);
-		LOGGER.info("last element of output || SP: {" + output[output.length-1][0] + "," + output[output.length-1][1] + "," + output[output.length-1][2] + "} || {"+ solutionPattern[output.length-1][0] + "," + solutionPattern[output.length-1][1] + "," + solutionPattern[output.length-1][2] + "}");
-		LOGGER.info("DONE");
 		return output;
 	}
 	public static String getLastKnownMessage () {

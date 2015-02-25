@@ -193,12 +193,10 @@ public class HeuristicAI {
 				System.out.println ("Was still deciding");
 				return 0;		
 			} else {	
-				System.out.println("Working");
 				this.stillDeciding = true; // so were not interrupted
 				this.solutionPointer = -1;
 				this.abortSolution();
 
-				System.out.println ("About to work");
 				GameState currentState = new GameState ();
 				currentState.setState(new BoardState (this.gameBoard), new ShapeState (this.engine.getCoordsOfCurrentShape(), this.engine.getCurrentShape()));
 				for (int c=0;c<this.engine.getGameBoard()[0].length;c++) {
@@ -210,7 +208,6 @@ public class HeuristicAI {
 				Solution solutionNoSwap = this.solMaster.solve(currentState, false, false, 1);					
 
 				this.solution = (int[][]) solutionNoSwap.steps.toArray(new int[][] {});
-				//	}
 				this.solutionPointer = -1;
 
 				// solution will automatically execute
@@ -274,7 +271,6 @@ public class HeuristicAI {
 				this.delay = newDelay;
 				this.stepper.setDelay(newDelay);
 			}
-
 		}
 		public int getDelay() {
 			return this.delay;
