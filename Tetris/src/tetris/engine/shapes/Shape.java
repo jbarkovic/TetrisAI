@@ -132,7 +132,6 @@ public boolean drop() { //returns true if there is a collision, the drop is not 
 			}
 		}
 	} catch (ArrayIndexOutOfBoundsException e) { // when shape reaches the bottom, will trigger exception here, this is normal
-		System.out.println("finished dropping shape color: " + this.ShapeColor);
 		return true;
 	}
 	this.drawSpaces(false);

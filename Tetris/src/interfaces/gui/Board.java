@@ -43,17 +43,15 @@ public class Board extends JPanel {
       rh.put(RenderingHints.KEY_RENDERING,
              RenderingHints.VALUE_RENDER_QUALITY);
 
-    //g2.setRenderingHints(rh);
       
       if (this.getWidth() != this.w || this.getHeight() != h) {
     	  resized = true;
           this.w = this.getWidth();
           this.h = this.getHeight();
       }
-
       if (this.initializedYet) {
           if (resized) {
-              System.out.println("Resize");
+              System.out.println("Resized");
               this.resizeBoard(g2);
           } else {
         	  this.updateSpaces(g2);
@@ -96,27 +94,43 @@ public class Board extends JPanel {
         this.initializedYet = true;
     }
     public Color getColor(int colorVal) {
+    	Color choose;
     	switch (colorVal) {
-    	case 0 : return Color.white;
-    	case 1 : return Color.red;
-    	case 2 : return Color.blue;
-    	case 3 : return Color.orange;
-    	case 4 : return Color.green;
-    	case 5 : return Color.yellow;
-    	case 6 : return Color.cyan;
-    	case 7 : return Color.magenta;
-    	case 10: return Color.lightGray;
-    	default : return Color.red;
+    	case 0 : {
+    		choose = Color.white;
+    		//choose = setTransparency(Color.white,(float) 0.5);
+    		break;
+    		}
+    	case 1 : {choose = Color.red; break;}
+    	case 2 : {choose = Color.blue; break;}
+    	case 3 : {choose = Color.orange; break;}
+    	case 4 : {choose = Color.green; break;}
+    	case 5 : {choose = Color.yellow; break;}
+    	case 6 : {choose = Color.cyan; break;}
+    	case 7 : {choose = Color.magenta; break;}
+    	case 10: {choose = Color.lightGray; break;}
+    	default :{choose = Color.red; break;}
     	}
+    	return choose;
     }
     public void updateScreen(int[][] gameState) {
     	for (int row=0;row<this.gameState.length;row++) {
     		for (int col=0;col<this.gameState[row].length;col++) {
 				this.gameState [row][col][0] = gameState [row][col];
     			if (this.gameArray != null && this.gameArray [0] != null) {
+    				boolean redraw = false;
     				if (this.gameState [row][col][0] != this.gameState [row][col][1]) {
     					this.gameState [row][col][1] = this.gameState [row][col][0];
-    					this.repaint(this.gameArray[row][col]);  				
+    					this.gameState [row][col][2] = 0;
+    					redraw = true;
+    					//this.repaint(this.gameArray[row][col]);  				
+    				} else if (this.gameState [row][col][2] > 0) {
+    					this.gameState[row][col][2]--;
+    					redraw = true;    					
+    				}
+    				if (redraw) {
+    					//this.repaint();
+    					if (this.gameArray[row][col] != null) this.repaint(this.gameArray[row][col]);
     				}
     			}
     		}
@@ -136,8 +150,19 @@ public class Board extends JPanel {
     private void setSpaceInEngine(int row,int col) {
     	this.engine.colorSpace(row,col);
     }
+    private Color setTransparency (Color original, float transparency) {
+    	transparency = (float) Math.max(0.0, transparency);
+    	transparency = (float) Math.min(1.0, transparency);
+    	
+    	return new Color (
+    			original.getRed()/(float)255,
+    			original.getGreen()/(float)255,
+    			original.getBlue()/(float)255,
+    			transparency
+    			);
+    }
     private void initializeGameState (int rows, int cols) {
-    	this.gameState = new int [rows][cols][2];
+    	this.gameState = new int [rows][cols][3];
     	for (int row=0;row<rows;row++) {
     		for (int col=0;col<cols;col++) {
     			// Set them different to force a redraw
@@ -160,17 +185,8 @@ public class Board extends JPanel {
         this.setIgnoreRepaint(true);			
 	}
 	public Board(int rows, int columns,double initialSquareSize, Engine inEngine) {
+		this (rows,columns,initialSquareSize);
 		this.engine = inEngine;
-		this.rows = rows;
-		this.columns = columns;
-		int ss = (int) initialSquareSize;
-		int dimy = (int)(this.rows*ss);
-		int dimx = (int)(this.columns*ss);
-		this.setPreferredSize(new Dimension(dimx,dimy));
-		initializeGameState (rows, columns);
-        this.gameArray = new Rectangle[this.rows][this.columns];
-        this.setDoubleBuffered(true);
-        this.setIgnoreRepaint(true);
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {

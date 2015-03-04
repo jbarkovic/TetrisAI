@@ -12,7 +12,7 @@ import java.util.ListIterator;
 
 public class Journal {
 	ArrayList<GameState> entries = new ArrayList<GameState> ();
-	
+	private static final int MAX_STATES = 100;
 	public Journal () {}
 	private Journal (ArrayList<GameState> entries) {
 		this.entries = entries;
@@ -23,7 +23,10 @@ public class Journal {
 	}
 	public void add (GameState inState, int currentShape, int nextShape, int swapShape) {
 		inState.setOtherShapeData(new Integer [] {currentShape, swapShape, nextShape});
-		entries.add(inState);
+		entries.add(0,inState);
+		if (entries.size() > MAX_STATES) {
+			entries.remove(MAX_STATES);
+		}
 	}
 	public ArrayList<GameState> getHistory () {
 		return this.entries;

@@ -1,5 +1,7 @@
 package ai.state;
 
+import interfaces.EngineInterface;
+
 public class GameState implements java.io.Serializable { 
 	private BoardState boardWithCurrentShape 	= null;
 	private BoardState boardWithoutCurrentShape	= null;
@@ -7,23 +9,31 @@ public class GameState implements java.io.Serializable {
 	private String message = null;
 	private Integer [] otherShapeData; // Data about nextshape and swapshape etc... to be filled by other classes as needed
 	
-	public GameState () {}
-	public GameState (GameState old) {		
-		this.setState(new BoardState (old.getBoardWithoutCurrentShape()), new ShapeState (old.currentShape));
+	private GameState () {}
+	public GameState (EngineInterface engine) {
+		this (new BoardState (engine.getGameBoard()), new ShapeState (engine.getCoordsOfCurrentShape(), engine.getCurrentShape()));
 	}
-	
-	public void setState (BoardState boardState, ShapeState shapeState) { // Will take gameboard with or without current shape		
+	public GameState (BoardState bState, ShapeState sState) {
+		init (bState, sState);
+	}
+	public GameState (GameState old) {		
+		init (old.getBoardWithoutCurrentShape(), old.currentShape);
+	}
+	public void setState (BoardState bState, ShapeState sState) {
+		this.boardWithCurrentShape.setState(bState);
+		this.boardWithoutCurrentShape.setState(bState);
+		this.currentShape.setState(sState);
+		this.getBoardSize()[0] = bState.size()[0];
+		this.getBoardSize()[1] = bState.size()[1];
+
+		this.boardWithCurrentShape.setSpaces(currentShape.getCoords(),currentShape.getType().toInt());
+		this.boardWithoutCurrentShape.clearSpaces(currentShape.getCoords());
+	}
+	private void init (BoardState boardState, ShapeState shapeState) { // Will take gameboard with or without current shape		
 		this.currentShape = new ShapeState(shapeState);
-		int [][] boardWithout = boardState.getStateCopy();
-		int [][] boardWith = boardState.getStateCopy();
-		
-		int [][] shapeCoords = this.currentShape.getCoordsCopy();
-		for (int [] coord : shapeCoords) {
-			boardWith 		[coord[0]] [coord[1]] 	= this.currentShape.getType().toInt();
-			boardWithout 	[coord[0]] [coord[1]] 	= 0;
-		}
-		this.boardWithCurrentShape 		= new BoardState (boardWith);
-		this.boardWithoutCurrentShape 	= new BoardState (boardWithout);
+		this.boardWithCurrentShape = new BoardState (boardState);
+		this.boardWithoutCurrentShape = new BoardState (boardState);
+		setState (boardState, shapeState);
 	}
 	public int [] getBoardSize () {
 		return this.boardWithCurrentShape.size();
@@ -57,14 +67,13 @@ public class GameState implements java.io.Serializable {
 		setState (this.boardWithoutCurrentShape, currentShape);
 	}
 	public static String dumpState (GameState inState, boolean printToOut) {
-		String message = "Game State Dump: \n";
-		for (int row = 0; row<inState.getBoardWithCurrentShape().getState().length;row++) {
-			message += "||";
-			for (int col=0;col<inState.getBoardWithCurrentShape().getState()[0].length;col++) {
-				message += inState.getBoardWithCurrentShape().getState()[row][col];
-			}
-			message += "||\n";
-		}
+		String message = "===============================================V\n";
+		message += "Game State Dump: \n";
+		message += "BoardWithCurrentShape\n";
+		message += inState.boardWithCurrentShape.dumpBoard();
+		message += "\nBoardWithOUTCurrentShape\n";
+		message += inState.boardWithoutCurrentShape.dumpBoard();
+		message += "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
 		if (printToOut) System.out.println(message);
 		return message;
 	}

@@ -28,7 +28,7 @@ public class Engine implements Tetris{
 	private boolean swapUsed;
 	private int previousChosenShape;
 	private boolean pause;
-	private boolean holdInput;
+	//	private boolean holdInput;
 	private boolean impossibleMode;
 	private Gravity gravity;
 	private static final int EMPTYCOLOR = 0;
@@ -38,175 +38,182 @@ public class Engine implements Tetris{
 	private Space[] startSpaces;
 	private Shape[] shapeBuffer;
 	private SHAPETYPE nextShapeRequest;
-	
+	private Object accessLock = new Object();
 	Random random = new Random();
-	
+
 	private final static Logger LOGGER = Logger.getLogger(Engine.class.getName());
 	static {
 		LOGGER.setLevel(Logger.getGlobal().getLevel());		
 	}
-	
+
 	public enum ShapeType {
 		L,J,O,S,Z,I,T
 	}
 	public int[][] getSwapBoard() {
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		int[][] retVal = new int[this.swapShapeGrid.length][this.swapShapeGrid[0].length];
-		for (int row=0;row<retVal.length;row++) {
-			for (int column=0;column<retVal[0].length;column++) {
-				retVal[row][column] = this.swapShapeGrid[row][column].getColor();
+		synchronized (accessLock) {
+			int[][] retVal = new int[this.swapShapeGrid.length][this.swapShapeGrid[0].length];
+			for (int row=0;row<retVal.length;row++) {
+				for (int column=0;column<retVal[0].length;column++) {
+					retVal[row][column] = this.swapShapeGrid[row][column].getColor();
+				}
 			}
+			return retVal;
 		}
-		this.holdInput = oldVal;
-		return retVal;
 	}
-	public int[][] getGameBoard() {
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		boolean useShadow = false;
-		if (this.dropShadow) useShadow = true; 
-		int[][] retVal = new int[this.rows][this.columns];
-		if (useShadow) {
-			for (int row=0;row<this.rows;row++) {
-				for (int column=0;column<this.columns;column++) {				
-					int color = this.gameSpaceArray[row][column].getColor();
-					if (color == EMPTYCOLOR) {
-						if (this.gameSpaceArray[row][column].getShadow()) retVal[row][column] = SHADOWCOLOR;
-						else retVal[row][column] = EMPTYCOLOR;
+	public int[][] getGameDisplayBoard () {
+		return getGameBoard(true);
+	}
+	public int[][] getGameBoard () {
+		return getGameBoard(false);
+	}
+	private int[][] getGameBoard(boolean withShadow) {
+		synchronized (accessLock) {
+			boolean useShadow = false;
+			if (this.dropShadow) useShadow = true; 
+			int[][] retVal = new int[this.rows][this.columns];
+			if (useShadow) {
+				for (int row=0;row<this.rows;row++) {
+					for (int column=0;column<this.columns;column++) {				
+						int color = this.gameSpaceArray[row][column].getColor();
+						if (color == EMPTYCOLOR) {
+							if (withShadow && this.gameSpaceArray[row][column].getShadow()) retVal[row][column] = SHADOWCOLOR;
+							else retVal[row][column] = EMPTYCOLOR;
+						}
+						else retVal[row][column] = color;
 					}
-					else retVal[row][column] = color;
+				}
+			} else {
+				for (int row=0;row<this.rows;row++) {
+					for (int column=0;column<this.columns;column++) {				
+						retVal[row][column] = this.gameSpaceArray[row][column].getColor();
+					}
 				}
 			}
-		} else {
-			for (int row=0;row<this.rows;row++) {
-				for (int column=0;column<this.columns;column++) {				
-					retVal[row][column] = this.gameSpaceArray[row][column].getColor();
-				}
-			}
+			int [][] rr = retVal.clone ();
+			return rr;
 		}
-		this.holdInput = oldVal;
-		int [][] rr = retVal.clone ();
-		return rr;
 	}
 	public int[][] getNextShapeBoard() {
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		int[][] retVal = new int[this.rows][this.columns];
-		for (int row=0;row<this.nextShapeGrid.length;row++) {
-			for (int column=0;column<this.nextShapeGrid[0].length;column++) {
-				retVal[row][column] = this.nextShapeGrid[row][column].getColor();
+		synchronized (accessLock) {
+			int[][] retVal = new int[this.rows][this.columns];
+			for (int row=0;row<this.nextShapeGrid.length;row++) {
+				for (int column=0;column<this.nextShapeGrid[0].length;column++) {
+					retVal[row][column] = this.nextShapeGrid[row][column].getColor();
+				}
 			}
+			return retVal;
 		}
-		this.holdInput = oldVal;
-		return retVal;		
 	}
 	public int[][] getCoordsOfCurrentShape() {
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		int[][] coords = new int[4][2];
-		if (this.currentShape != null) {
-			Space[] spaces = this.currentShape.getSpaces();
-			for (int sp=0;sp<spaces.length;sp++) {
-				int[] c = spaces[sp].getCoords().clone();
-				coords[sp] = new int[] {c[0],c[1]};
-			}	
+		synchronized (accessLock) {
+			int[][] coords = new int[4][2];
+			if (this.currentShape != null) {
+				Space[] spaces = this.currentShape.getSpaces();
+				for (int sp=0;sp<spaces.length;sp++) {
+					int[] c = spaces[sp].getCoords().clone();
+					coords[sp] = new int[] {c[0],c[1]};
+				}	
+			}
+			return coords;
 		}
-		this.holdInput = oldVal;
-		return coords;
 	}
 	public void requestNextShape(SHAPETYPE type) {
 		if (type == SHAPETYPE.NONE) return;
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		if (this.nextShapeRequest == null) {
-			this.nextShapeRequest = type;
+		synchronized (accessLock) {
+			if (this.nextShapeRequest == null) {
+				this.nextShapeRequest = type;
+			}
 		}
-		this.holdInput = oldVal;
 	}
 	public void colorSpace(int r,int c) {
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		if (this.gameSpaceArray == null) {
-			this.holdInput = oldVal;
-			return;
+		colorSpace(r,c,4);
+	}
+	public void colorSpace(int r,int c,int color) {
+		synchronized (accessLock) {
+			if (this.gameSpaceArray == null) {
+				return;
+			}
+			if (r>this.gameSpaceArray.length || c > this.gameSpaceArray[0].length || c < 0 || r < 0) {
+				LOGGER.severe("ERROR: in engine attempted to color space with bad coordinates");
+			}
+			if (this.gameSpaceArray[r][c].getColor() != EMPTYCOLOR && this.gameSpaceArray[r][c].getColor() != SHADOWCOLOR) {
+				this.gameSpaceArray[r][c].setColor(EMPTYCOLOR);
+			} else {
+				this.gameSpaceArray[r][c].setColor(color);
+			}
+			this.callBackMessenger.ringBell();
 		}
-		if (r>this.gameSpaceArray.length || c > this.gameSpaceArray[0].length || c < 0 || r < 0) {
-			LOGGER.severe("ERROR: in engine attempted to color space with bad coordinates");
-		}
-		if (this.gameSpaceArray[r][c].getColor() != EMPTYCOLOR && this.gameSpaceArray[r][c].getColor() != SHADOWCOLOR) {
-			this.gameSpaceArray[r][c].setColor(EMPTYCOLOR);
-		} else {
-			this.gameSpaceArray[r][c].setColor(4);
-		}
-		this.holdInput = oldVal;
-		this.callBackMessenger.ringBell();
 	}
 	public boolean gravityTick() {
 		if(drop(false,true)) {
-  		  	
-  			newShape();
-  			return true;
-  	  }
-  	  return false;
-	  	
+
+			newShape();
+			return true;
+		}
+		return false;
+
 	}
 	public void enableDropShadow(boolean val) {
-		if (this.holdInput) return;
-		this.dropShadow = val;
-		if (!val) {
-			for (int row=0;row<this.rows;row++) {
-				for (int col=0;col<this.columns;col++) {
-					this.gameSpaceArray[row][col].setShadow(true);
+		synchronized (accessLock) {
+			this.dropShadow = val;
+			if (!val) {
+				for (int row=0;row<this.rows;row++) {
+					for (int col=0;col<this.columns;col++) {
+						this.gameSpaceArray[row][col].setShadow(true);
+					}
 				}
 			}
+			this.callBackMessenger.ringBell();
 		}
-		this.callBackMessenger.ringBell();
 	}
 	public boolean getDropShadowEnabled() {
 		return this.dropShadow;
 	}
-	public boolean wasThereANewShape() {	
+	public boolean wasThereANewShape() {
 		boolean val = this.wasThereNewShape;
 		this.wasThereNewShape = false;
 		return val;
 	}
 	public int getLinesCleared() {
-		return this.linesCleared;			
+		synchronized (accessLock) {
+			return this.linesCleared;
+		}
 	}
 	public void plummit() {
-		while(!this.drop(true,false));
+		synchronized (accessLock) {
+			while(!this.drop(true,false));
+		}
 		this.callBackMessenger.ringBell();		
 	}
 	public boolean forceRotateCW() {
-		boolean res = !this.currentShape.rotateForward();
-		this.setDropShadow();
-		this.callBackMessenger.ringBell();
-		return res;
+		synchronized (accessLock) {
+			boolean res = !this.currentShape.rotateForward();
+			this.setDropShadow();
+			this.callBackMessenger.ringBell();
+			return res;
+		}
 	}
 	public boolean rotateClockwise() {
-		if (this.holdInput) return false;
-		boolean oldVal = this.holdInput;		
-		this.holdDrops = true;
-		boolean result = this.currentShape.rotateForward();
-		this.wasThereNewShape = false;
-		this.setDropShadow();
-		this.callBackMessenger.ringBell();
-		this.holdDrops = false;
-		this.holdInput = oldVal;
-		return !result;
+		synchronized (accessLock) {
+			this.holdDrops = true;
+			boolean result = this.currentShape.rotateForward();
+			this.wasThereNewShape = false;
+			this.setDropShadow();
+			this.callBackMessenger.ringBell();
+			this.holdDrops = false;
+			return !result;
+		}
 	}
 	public boolean rotateCounterClockwise() {
-		if (this.holdInput) return false;
-		boolean oldVal = this.holdInput;
-		this.holdDrops = true;
-		boolean result = this.currentShape.rotateBackward();
-		this.wasThereNewShape = false;
-		this.setDropShadow();
-		this.callBackMessenger.ringBell();
-		this.holdDrops = false;
-		this.holdInput = oldVal;
-		return !result;
+		synchronized (accessLock) {
+			this.holdDrops = true;
+			boolean result = this.currentShape.rotateBackward();
+			this.wasThereNewShape = false;
+			this.setDropShadow();
+			this.callBackMessenger.ringBell();
+			this.holdDrops = false;
+			return !result;
+		}
 	}
 	public boolean forceShiftLeft() {
 		boolean res = this.currentShape.shiftLeft();
@@ -221,54 +228,53 @@ public class Engine implements Tetris{
 		return res;
 	}
 	public boolean shiftLeft() {
-		//if (this.holdInput) return false;
-		//boolean oldVal = this.holdInput;
-		this.holdDrops = true;
-		if (this.dropDone) return false;
-		boolean result = this.currentShape.shiftLeft();
-		this.wasThereNewShape = false;
-		this.setDropShadow();
-		this.callBackMessenger.ringBell();
-		this.holdDrops = false;
-		//this.holdInput = oldVal;
-		return result;
+		synchronized (accessLock) {
+			this.holdDrops = true;
+			if (this.dropDone) return false;
+			boolean result = this.currentShape.shiftLeft();
+			this.wasThereNewShape = false;
+			this.setDropShadow();
+			this.callBackMessenger.ringBell();
+			this.holdDrops = false;
+			return result;
+		}
 	}
 	public boolean shiftRight() {
-		//if (this.holdInput) return false;
-		//boolean oldVal = this.holdInput;
-		this.holdDrops = true;
-		if (this.dropDone) return false;
-		boolean result = this.currentShape.shiftRight();
-		this.wasThereNewShape = false;
-		this.setDropShadow();
-		this.callBackMessenger.ringBell();
-		this.holdDrops = false;
-		//this.holdInput = oldVal;
-		return result;
+		synchronized (accessLock) {
+			this.holdDrops = true;
+			if (this.dropDone) return false;
+			boolean result = this.currentShape.shiftRight();
+			this.wasThereNewShape = false;
+			this.setDropShadow();
+			this.callBackMessenger.ringBell();
+			this.holdDrops = false;
+			return result;
+		}
 	}
 	public boolean dropShape() { // for the interface
-		return drop(true , true);		
+		synchronized (accessLock) {
+			boolean result = drop(true , true);
+			this.callBackMessenger.ringBell();
+			return result;
+		}
 	}
 	private boolean drop(boolean frominside,boolean pushUpdate) { //returns true if collision, or done drop
-		//LOGGER.info("Drop in Engine.java");
 		if (this.pause && !frominside) return false;
-		//if (this.dropDone) return true;	
-		//if (this.holdDrops) return false;
+
 		if (this.currentShape == null || this.swappedShape == null || this.nextShape == null) return true; // needed to initialize the engine properly
 		this.holdDrops = true;
 		boolean result = this.currentShape.drop();	
-		this.wasThereNewShape = false;
+		if (!frominside) this.wasThereNewShape = false;
 		if (result) {
 			//LOGGER.info("Drop Done in Engine");
 			this.dropDone = true;
 			this.manageFullRows();
-			newShape();			
-			this.callBackMessenger.ringBell();
+			newShape();
 			this.holdDrops = false;
 			return frominside;
 		} else this.setDropShadow();
-		if (pushUpdate) this.callBackMessenger.ringBell();
 		this.holdDrops = false;
+		if (pushUpdate) this.callBackMessenger.ringBell();
 		return result;
 	}
 	public boolean isGameLost() {
@@ -284,6 +290,7 @@ public class Engine implements Tetris{
 		return this.convertShapeToShapeType(this.swappedShape);
 	}
 	public void setGravity(int time_milliseconds) {
+
 		if (time_milliseconds < 0) return; // no anti-gravity
 		if (this.gravity.getGravity() == 0) {
 			this.startDropThread(time_milliseconds);
@@ -307,77 +314,80 @@ public class Engine implements Tetris{
 		}
 	}
 	public boolean swapShapes() {  		// returns true if succeeded
-		if (this.swapUsed) return false;
-		this.swapShapes = true;
-		this.currentShape.delete();
-		this.newShape();
-		this.callBackMessenger.ringBell();
-		return true;
+		synchronized (accessLock) {
+			if (this.swapUsed) return false;
+			this.swapShapes = true;
+			this.currentShape.delete();
+			this.newShape();
+			this.callBackMessenger.ringBell();
+			return true;
+		}
 	}
 	public void pause() {
-		this.pause = !this.pause;
+		synchronized (accessLock) {
+			this.pause = !this.pause;
+		}
 	}
 	public boolean isPaused() {
 		return this.pause;
 	}
 	private void manageFullRows(){
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		boolean found = false;
-		int[] startRow = new int[] {-1,-1,-1,-1};		// 4 cause the max number of full rows does not exceed 4 (height of tallest shape)
-		int numFound = 0;
-		for (int row=0;row<this.rows;row++) {
-			int num = 0;
-			for (int column=0;column<this.columns;column++) {
-				if (this.gameSpaceArray[row][column].getColor() != EMPTYCOLOR) {
-					num++;
-				}
-			}
-			if (num == this.columns) {
-				found = true;
-				numFound++;
-				for (int i=0;i<startRow.length;i++) {
-					if (startRow[i] < 0) {
-						startRow[i] = row;
+		synchronized (accessLock) {
+			boolean found = false;
+			int[] startRow = new int[] {-1,-1,-1,-1};		// 4 cause the max number of full rows does not exceed 4 (height of tallest shape)
+			int numFound = 0;
+			for (int row=0;row<this.rows;row++) {
+				int num = 0;
+				for (int column=0;column<this.columns;column++) {
+					if (this.gameSpaceArray[row][column].getColor() != EMPTYCOLOR) {
+						num++;
 					}
 				}
-				for (int column=0;column<this.columns;column++) {
-					this.gameSpaceArray[row][column].setColor(EMPTYCOLOR);
-				}
-			}
-		}
-		if (found) {
-			this.linesCleared += numFound;
-			
-			for (int i=0;i<numFound;i++) {
-				for (int row=this.rows-1;row>-1;row--) {
-					int num =0;
-					for (int column=0;column<this.columns;column++) {
-						if (this.gameSpaceArray[row][column].getColor() == EMPTYCOLOR) {
-							num++;
+				if (num == this.columns) {
+					found = true;
+					numFound++;
+					for (int i=0;i<startRow.length;i++) {
+						if (startRow[i] < 0) {
+							startRow[i] = row;
 						}
 					}
-					if (num == this.columns) {				
-						for (int subRow=row;subRow>0;subRow--) {
-							for (int subColumn=0;subColumn<this.columns;subColumn++) {
-								if (this.gameSpaceArray[subRow-1][subColumn].getColor() != EMPTYCOLOR) {
-									this.gameSpaceArray[subRow][subColumn].setColor(this.gameSpaceArray[subRow-1][subColumn].getColor());
-									this.gameSpaceArray[subRow-1][subColumn].setColor(EMPTYCOLOR);
-								}
+					for (int column=0;column<this.columns;column++) {
+						this.gameSpaceArray[row][column].setColor(EMPTYCOLOR);
+					}
+				}
+			}
+			if (found) {
+				this.linesCleared += numFound;
+
+				for (int i=0;i<numFound;i++) {
+					for (int row=this.rows-1;row>-1;row--) {
+						int num =0;
+						for (int column=0;column<this.columns;column++) {
+							if (this.gameSpaceArray[row][column].getColor() == EMPTYCOLOR) {
+								num++;
 							}
 						}
-						break;
+						if (num == this.columns) {				
+							for (int subRow=row;subRow>0;subRow--) {
+								for (int subColumn=0;subColumn<this.columns;subColumn++) {
+									if (this.gameSpaceArray[subRow-1][subColumn].getColor() != EMPTYCOLOR) {
+										this.gameSpaceArray[subRow][subColumn].setColor(this.gameSpaceArray[subRow-1][subColumn].getColor());
+										this.gameSpaceArray[subRow-1][subColumn].setColor(EMPTYCOLOR);
+									}
+								}
+							}
+							break;
+						}
+
 					}
-	
+				}
+			}
+			for (int row=0;row<this.rows;row++) {
+				for (int col=0;col<this.columns;col++) {
+					this.gameSpaceArray[row][col].setShadow(false);
 				}
 			}
 		}
-		for (int row=0;row<this.rows;row++) {
-			for (int col=0;col<this.columns;col++) {
-				this.gameSpaceArray[row][col].setShadow(false);
-			}
-		}
-		this.holdInput = oldVal;
 	}
 	public SHAPETYPE convertShapeToShapeType(Shape shape) {
 		if (shape != null) {
@@ -433,34 +443,34 @@ public class Engine implements Tetris{
 		int displacement = this.rows - maxRow - 1;
 		if (maxRow != this.rows-1) { // so a shape will stay at the bottom after a drop
 			FindLowestRow : {
-				int[][] shapeCoords = new int[4][2];
-				for (int shape=0;shape<curShapeSpaces.length;shape++) {
-					shapeCoords[shape] = curShapeSpaces[shape].getCoords();
-				}
-				if (maxRow>=minRow) {
-					for (int disp=2;(disp+maxRow)<this.rows;disp++) {
-						for (Space sp : curShapeSpaces) {
-							int row = sp.getCoords()[0]+disp;
-							int col = sp.getCoords()[1];							
-							int color = this.gameSpaceArray[sp.getCoords()[0]+disp][sp.getCoords()[1]].getColor();
-							if (color != EMPTYCOLOR) {
-								boolean itsOurs = false;
-								for (int space=0;space<curShapeSpaces.length;space++) {
-									if (curShapeSpaces[space].getCoords()[0] == row && curShapeSpaces[space].getCoords()[1] == col) {
-										itsOurs = true;
-										break;
-									}
-								}
-								if (itsOurs) continue;
-								else {
-									displacement = disp - 1;
-									break FindLowestRow;
-								}
-							} 
-						}
-					}
-				} else LOGGER.severe("MAX ROW LESS THAN MIN ROW!");			
+			int[][] shapeCoords = new int[4][2];
+			for (int shape=0;shape<curShapeSpaces.length;shape++) {
+				shapeCoords[shape] = curShapeSpaces[shape].getCoords();
 			}
+			if (maxRow>=minRow) {
+				for (int disp=2;(disp+maxRow)<this.rows;disp++) {
+					for (Space sp : curShapeSpaces) {
+						int row = sp.getCoords()[0]+disp;
+						int col = sp.getCoords()[1];							
+						int color = this.gameSpaceArray[sp.getCoords()[0]+disp][sp.getCoords()[1]].getColor();
+						if (color != EMPTYCOLOR) {
+							boolean itsOurs = false;
+							for (int space=0;space<curShapeSpaces.length;space++) {
+								if (curShapeSpaces[space].getCoords()[0] == row && curShapeSpaces[space].getCoords()[1] == col) {
+									itsOurs = true;
+									break;
+								}
+							}
+							if (itsOurs) continue;
+							else {
+								displacement = disp - 1;
+								break FindLowestRow;
+							}
+						} 
+					}
+				}
+			} else LOGGER.severe("MAX ROW LESS THAN MIN ROW!");			
+		}
 		if(displacement > maxRow-minRow+1) {
 			for (Space sp : curShapeSpaces) {						
 				this.gameSpaceArray[sp.getCoords()[0]+displacement][sp.getCoords()[1]].setShadow(true);
@@ -476,148 +486,140 @@ public class Engine implements Tetris{
 	}
 	private void newShape() {
 		LOGGER.info("NEW Shape");
-		this.wasThereNewShape = true;
 		this.holdDrops = true;		
-		if (this.holdInput) return;
-		boolean oldVal = this.holdInput;
-		this.holdInput = true;
-		for (Space sp : this.startSpaces) {
-			if (sp.getColor() != EMPTYCOLOR) {
-				this.gameOver = true;
-				this.holdDrops = false;	
-				this.holdInput = oldVal;
-				LOGGER.warning("GAME OVER");
-				return; // so the last lines of this method are still executed on gameover event
+		synchronized (accessLock) {
+			for (Space sp : this.startSpaces) {
+				if (sp.getColor() != EMPTYCOLOR) {
+					this.gameOver = true;
+					this.holdDrops = false;	
+					LOGGER.warning("GAME OVER");
+					this.wasThereNewShape = true;
+					return; // so the last lines of this method are still executed on gameover event
+				}
 			}
+			if (this.swappedShape == null) {
+				LOGGER.info("Generating swap shape...");
+				this.swapUsed = false;
+				this.currentShape = this.drawShape(this.gameSpaceArray, this.chooseShape());
+				this.unDrawOnSwapShapeGrid();
+				this.unDrawOnNewShapeGrid();
+				this.swappedShape = drawShape(this.swapShapeGrid, this.chooseShape());
+				this.nextShape = drawShape(this.nextShapeGrid, this.chooseShape());
+			}
+			else if (this.swapShapes){
+				LOGGER.info("Swapping");
+				this.swapUsed = true;
+				String auxShapeClass = this.swappedShape.getClass().getSimpleName();
+				String currentShapeClass = this.currentShape.getClass().getSimpleName();
+				switch (auxShapeClass) {
+				case "LeftL" : {
+					this.currentShape = new LeftL(this.gameSpaceArray);
+					break;
+				}
+				case "RightL" : {
+					this.currentShape = new RightL(this.gameSpaceArray);
+					break;
+				}
+				case "LeftS" : { 
+					this.currentShape = new LeftS(this.gameSpaceArray);
+					break;
+				}
+				case "RightS" : {
+					this.currentShape = new RightS(this.gameSpaceArray);
+					break;
+				}
+				case "Square" : {
+					this.currentShape = new Square(this.gameSpaceArray);
+					break;
+				}
+				case "Straight" : {
+					this.currentShape = new Straight(this.gameSpaceArray);
+					break;
+				}
+				case "Tee" : {
+					this.currentShape = new Tee(this.gameSpaceArray);
+					break;
+				}
+				}
+				this.unDrawOnSwapShapeGrid();
+				switch (currentShapeClass) {
+				case "LeftL" : {
+					this.swappedShape = new LeftL(this.swapShapeGrid);
+					break;
+				}
+				case "RightL" : {
+					this.swappedShape = new RightL(this.swapShapeGrid);
+					break;
+				}
+				case "LeftS" : { 
+					this.swappedShape = new LeftS(this.swapShapeGrid);
+					break;
+				}
+				case "RightS" : {
+					this.swappedShape = new RightS(this.swapShapeGrid);
+					break;
+				}
+				case "Square" : {
+					this.swappedShape = new Square(this.swapShapeGrid);
+					break;
+				}
+				case "Straight" : {
+					this.swappedShape = new Straight(this.swapShapeGrid);
+					break;
+				}
+				case "Tee" : {
+					this.swappedShape = new Tee(this.swapShapeGrid);
+					break;
+				}
+				default : LOGGER.severe("ERROR: Could not determine name of swap shape!");
+				}
+				this.swapShapes = false;
+			}
+			else if (!this.swapShapes) {
+				LOGGER.info("Getting New shape...");
+				this.swapUsed = false;
+				/*TODO This is the worst kind of code. Must fix it...*/
+				String nextShapeClass = this.nextShape.getClass().getSimpleName();
+				switch (nextShapeClass) {
+				case "LeftL" : {
+					this.currentShape = new LeftL(this.gameSpaceArray);
+					break;
+				}
+				case "RightL" : {
+					this.currentShape = new RightL(this.gameSpaceArray);
+					break;
+				}
+				case "LeftS" : { 
+					this.currentShape = new LeftS(this.gameSpaceArray);
+					break;
+				}
+				case "RightS" : {
+					this.currentShape = new RightS(this.gameSpaceArray);
+					break;
+				}
+				case "Square" : {
+					this.currentShape = new Square(this.gameSpaceArray);
+					break;
+				}
+				case "Straight" : {
+					this.currentShape = new Straight(this.gameSpaceArray);
+					break;
+				}
+				case "Tee" : {
+					this.currentShape = new Tee(this.gameSpaceArray);
+					break;
+				}
+				default : LOGGER.severe("ERROR: Could not determine next shape!");
+				}
+				this.unDrawOnNewShapeGrid();
+				this.nextShape = drawShape(this.nextShapeGrid, this.chooseShape()); 
+				this.swapShapes = false;
+			}
+			this.holdDrops = false;
+			this.wasThereNewShape = true;
+			this.callBackMessenger.ringBell();
+			this.setDropShadow();
 		}
-		 if (this.swappedShape == null) {
-			LOGGER.info("Generating swap shape...");
-			this.swapUsed = false;
-			this.currentShape = this.drawShape(this.gameSpaceArray, this.chooseShape());
-			this.unDrawOnSwapShapeGrid();
-			this.unDrawOnNewShapeGrid();
-			this.swappedShape = drawShape(this.swapShapeGrid, this.chooseShape());
-			this.nextShape = drawShape(this.nextShapeGrid, this.chooseShape());
-		}
-		else if (this.swapShapes){
-			LOGGER.info("Swapping");
-			this.swapUsed = true;
-			String auxShapeClass = this.swappedShape.getClass().getSimpleName();
-			String currentShapeClass = this.currentShape.getClass().getSimpleName();
-			switch (auxShapeClass) {
-			case "LeftL" : {
-				this.currentShape = new LeftL(this.gameSpaceArray);
-				break;
-			}
-			case "RightL" : {
-				this.currentShape = new RightL(this.gameSpaceArray);
-				break;
-			}
-			case "LeftS" : { 
-				this.currentShape = new LeftS(this.gameSpaceArray);
-				break;
-			}
-			case "RightS" : {
-				this.currentShape = new RightS(this.gameSpaceArray);
-				break;
-			}
-			case "Square" : {
-				this.currentShape = new Square(this.gameSpaceArray);
-				break;
-			}
-			case "Straight" : {
-				this.currentShape = new Straight(this.gameSpaceArray);
-				break;
-			}
-			case "Tee" : {
-				this.currentShape = new Tee(this.gameSpaceArray);
-				break;
-			}
-			}
-			this.unDrawOnSwapShapeGrid();
-			switch (currentShapeClass) {
-			case "LeftL" : {
-				this.swappedShape = new LeftL(this.swapShapeGrid);
-				break;
-			}
-			case "RightL" : {
-				this.swappedShape = new RightL(this.swapShapeGrid);
-				break;
-			}
-			case "LeftS" : { 
-				this.swappedShape = new LeftS(this.swapShapeGrid);
-				break;
-			}
-			case "RightS" : {
-				this.swappedShape = new RightS(this.swapShapeGrid);
-				break;
-			}
-			case "Square" : {
-				this.swappedShape = new Square(this.swapShapeGrid);
-				break;
-			}
-			case "Straight" : {
-				this.swappedShape = new Straight(this.swapShapeGrid);
-				break;
-			}
-			case "Tee" : {
-				this.swappedShape = new Tee(this.swapShapeGrid);
-				break;
-			}
-			default : LOGGER.severe("ERROR: Could not determine name of swap shape!");
-			}
-			this.swapShapes = false;
-		}
-		else if (!this.swapShapes) {
-			LOGGER.info("Getting New shape...");
-			this.swapUsed = false;
-			/*TODO This is the worst kind of code. Must fix it...*/
-			String nextShapeClass = this.nextShape.getClass().getSimpleName();
-			switch (nextShapeClass) {
-			case "LeftL" : {
-				this.currentShape = new LeftL(this.gameSpaceArray);
-				break;
-			}
-			case "RightL" : {
-				this.currentShape = new RightL(this.gameSpaceArray);
-				break;
-			}
-			case "LeftS" : { 
-				this.currentShape = new LeftS(this.gameSpaceArray);
-				break;
-			}
-			case "RightS" : {
-				this.currentShape = new RightS(this.gameSpaceArray);
-				break;
-			}
-			case "Square" : {
-				this.currentShape = new Square(this.gameSpaceArray);
-				break;
-			}
-			case "Straight" : {
-				this.currentShape = new Straight(this.gameSpaceArray);
-				break;
-			}
-			case "Tee" : {
-				this.currentShape = new Tee(this.gameSpaceArray);
-				break;
-			}
-			default : LOGGER.severe("ERROR: Could not determine next shape!");
-			}
-			this.unDrawOnNewShapeGrid();
-			this.nextShape = drawShape(this.nextShapeGrid, this.chooseShape()); 
-			this.swapShapes = false;
-		}
-		this.holdDrops = false;
-		this.callBackMessenger.ringBell();
-		this.setDropShadow();
-		this.holdInput = oldVal;
-	}
-	private void updateShapeBuffer() {
-		for (int el=0;el<this.shapeBuffer.length-1;el++) {
-			this.shapeBuffer[el] = this.shapeBuffer[el+1];
-		}
-		this.shapeBuffer[this.shapeBuffer.length-1] = this.drawShape(this.gameSpaceArray, this.chooseShape());
 	}
 	private void unDrawOnNewShapeGrid() {
 		for (int row=0;row<this.nextShapeGrid.length;row++) {
@@ -640,19 +642,19 @@ public class Engine implements Tetris{
 			int result = this.nextShapeRequest.toInt();
 			this.nextShapeRequest = null;
 			return result;
-//			ShapeType shape = this.nextShapeRequest;
-//			this.nextShapeRequest = null;
-//			switch (shape) {			
-//			case L : return 3;
-//			case J : return 0;
-//			case I : return 2;
-//			case S : return 5;
-//			case Z : return 6;
-//			case O : return 1;
-//			case T : return 4;
-//			}
+			//			ShapeType shape = this.nextShapeRequest;
+			//			this.nextShapeRequest = null;
+			//			switch (shape) {			
+			//			case L : return 3;
+			//			case J : return 0;
+			//			case I : return 2;
+			//			case S : return 5;
+			//			case Z : return 6;
+			//			case O : return 1;
+			//			case T : return 4;
+			//			}
 		}
-		
+
 		if (this.impossibleMode) {
 			boolean random_bool = random.nextBoolean();
 			if (random_bool) {
@@ -719,7 +721,7 @@ public class Engine implements Tetris{
 		return new Space[] {	
 				gameBoard[0][columnStart], gameBoard[0][columnStart+1],	gameBoard[0][columnStart+2], gameBoard[0][columnStart+3],
 				gameBoard[1][columnStart], gameBoard[1][columnStart+1],	gameBoard[1][columnStart+2], gameBoard[1][columnStart+3]
-				};
+		};
 	}
 	public Engine(int rows, int columns, int gravity,CallBack callBackMessenger) {
 		this.impossibleMode = false;
@@ -755,8 +757,8 @@ public class Engine implements Tetris{
 		this.startDropThread(gravity);
 
 	}
-			
-			
+
+
 }
 final class Gravity {
 	private Timer timer;
@@ -766,17 +768,17 @@ final class Gravity {
 	public static void start(int gravity, Engine inTetris) {
 		final Engine tetris = inTetris;
 
-			final int G = gravity;
-			EventQueue.invokeLater(new Runnable() {
-				public void run() {
-					try {
-						new Gravity(G,tetris);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
+		final int G = gravity;
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					new Gravity(G,tetris);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-			});
-		
+			}
+		});
+
 	}
 	public void setEasySpin(boolean val) {
 		this.easySpin = val;
@@ -805,15 +807,15 @@ final class Gravity {
 		inTetris.connectGravity(this);
 		this.delay = delay;
 		if (delay != 0) { // to allow no gravity
-		  ActionListener taskPerformer = new ActionListener() {
-		      public void actionPerformed(ActionEvent evt) {
-		    	  setDropRequestStatus(true);
-		    	  tetris.gravityTick();
-		    	  setDropRequestStatus(false);
-		      }
-		  };
-		  this.timer = new Timer(delay, taskPerformer);
-		  this.timer.start();
+			ActionListener taskPerformer = new ActionListener() {
+				public void actionPerformed(ActionEvent evt) {
+					setDropRequestStatus(true);
+					tetris.gravityTick();
+					setDropRequestStatus(false);
+				}
+			};
+			this.timer = new Timer(delay, taskPerformer);
+			this.timer.start();
 		} else {
 			while (tetris.gravityTick());
 		}

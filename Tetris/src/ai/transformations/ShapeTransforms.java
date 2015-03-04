@@ -3,7 +3,7 @@ package ai.transformations;
 import java.util.logging.Logger;
 
 import tetris.engine.shapes.SHAPETYPE;
-import ai.logic.HeuristicAI;
+import ai.logic.AIBacktrack;
 import ai.logic.SolutionMaster;
 import ai.state.*;
 
@@ -21,60 +21,56 @@ public class ShapeTransforms {
 	}
 	public static GameState predictRotate (GameState inState) {		
 		if (canRotate(inState)) {
-			ShapeState newCurrentShape = new ShapeState (RotationManager.getNextRotateCoords(inState), inState.getShape().getType());
+			ShapeState newCurrentShape = new ShapeState (inState.getShape(),RotationManager.getNextRotateCoords(inState), inState.getShape().getType());
 			if (inState.getShape().equals(newCurrentShape)) {
-				System.err.println("ERROR: Shapes equal after a rotate. Shapetype was " + inState.getShape().getType());
+				//System.err.println("ERROR: Shapes equal after a rotate. Shapetype was " + inState.getShape().getType());
 			}
 			inState.setCurrentShape(newCurrentShape);
 		}
-		if (HeuristicAI.plummit) inState.invalidate ();
+		if (AIBacktrack.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictDropOnce (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[0]++;
 		}
-		if (HeuristicAI.plummit) inState.invalidate ();
+		if (AIBacktrack.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictShiftRight (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[1]++;
 		}
-		if (HeuristicAI.plummit) inState.invalidate ();
+	//	inState.invalidate ();
+		if (AIBacktrack.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictShiftLeft (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[1]--;
 		}
-		if (HeuristicAI.plummit) inState.invalidate ();
+		if (AIBacktrack.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictCompleteDrop(GameState inState) {
-		int displacement = 0;		
+		int displacement = inState.getBoardSize()[0]+1;		
 		int [][] gB = inState.getBoardWithoutCurrentShape().getState();
-		for (int offset = 1;offset<=gB.length;offset++) {
-			try {
-				for (int[] coord : inState.getShape().getCoords()) {
-					if (gB [coord[0]+offset] [coord[1]] != 0) {
-						throw new ArrayIndexOutOfBoundsException();
-					}
+		int [][] coords = inState.getShape().getCoords();
+		for (int [] coord : coords) {
+			for (int offset = 1;offset<=gB.length;offset++) {
+				if (coord[0] + offset >= inState.getBoardSize()[0] || gB [coord[0]+offset] [coord[1]] > 0) {
+					displacement = Math.min(displacement, offset-1);
+					break;
 				}
-			} catch (ArrayIndexOutOfBoundsException e) {				
-				displacement = offset - 1;
-				break;
 			}
-		}		
-		if (displacement >= 0) { // for speed and robustness
-			int [][] coords = inState.getShape().getCoords();
-			for (int coord =0;coord<coords.length;coord++) {
-				coords [coord][0] += displacement;
-			}
-		} else {
-			LOGGER.severe("Displacement Error in predict complete drop");
 		}
-		if (HeuristicAI.plummit) inState.invalidate ();
+	//	System.out.println ("Displacement: " + displacement);
+		if (displacement >= 0) { // for speed and robustness
+			for (int [] coord : coords) {
+				coord [0] += displacement;
+			}
+		}
+		if (AIBacktrack.plummit) inState.invalidate ();
 		return inState;
 	}
 	public static int[] getShapeLimits(GameState inState) { // returns {minCol,MaxCol,MinRow,MaxRow)

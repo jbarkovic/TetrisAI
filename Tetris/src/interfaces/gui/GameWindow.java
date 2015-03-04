@@ -6,13 +6,18 @@ import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 
-import ai.logic.HeuristicAI;
+import ai.logic.AIBacktrack;
+import ai.logic.ComputedValue;
+import ai.logic.SolutionValue;
 import ai.state.GameState;
 import ai.state.Journal;
+import ai.transformations.ShapeTransforms;
 import interfaces.CallBackMessenger;
+import interfaces.EngineInterface;
 import tetris.logging.TetrisLogger;
 import tetris.engine.mechanics.*;
 import tetris.engine.shapes.SHAPETYPE;
@@ -32,9 +37,14 @@ public class GameWindow extends JFrame {
 	private boolean justStarted = true;
 	private ArrayList<GameState> replay;
 	private int oldLinesCleared = 0;
-	private HeuristicAI ai;
-	private boolean germanMode = false;
-	String [] args = null;
+	private AIBacktrack ai;
+	private int germanMode = 0;
+	public String [] args = null;
+	
+	static {
+		Logger logger = Logger.getGlobal();
+		logger.setLevel(Level.OFF);			
+	}
 
 	public void linkShapeScreen(AuxShapeBoard asb) {
 		if (this.swapShape == null) {
@@ -56,7 +66,7 @@ public class GameWindow extends JFrame {
 			this.nextShape.updateScreen(nextShape);
 		}
 	}
-	public void updateScreen() {			
+	public synchronized void updateScreen() {			
 		if (this.needToRequestFocus) {
 			this.requestFocus();
 			this.needToRequestFocus = false;
@@ -72,7 +82,7 @@ public class GameWindow extends JFrame {
 				}
 			}
 		} else {
-			this.gameState = this.engine.getGameBoard();
+			this.gameState = this.engine.getGameDisplayBoard();
 		}
 		this.gameBoard.updateScreen(this.gameState);		
 		this.updateShapeBoards(this.engine.getSwapShape(), this.engine.getNextShape());
@@ -84,12 +94,13 @@ public class GameWindow extends JFrame {
 		if (this.oldLinesCleared < this.engine.getLinesCleared()) {
 			if (this.engine.getLinesCleared() % 10 == 0) {
 				int oldGravity = this.engine.getGravity();				
-				//this.engine.setGravity(oldGravity - 10);	
 				System.out.println("Setting gravity to: " + (oldGravity - 10));
 			}
 			this.oldLinesCleared = this.engine.getLinesCleared();
+			setTitle();
 		}
-		this.ai.step();
+	}
+	private void setTitle () {
 		this.setTitle("Mega Tetris" + " " + this.engine.getLinesCleared() + " Lines Cleared");
 	}
 	private void updateShapeBoards (SHAPETYPE swap, SHAPETYPE next) {
@@ -153,8 +164,8 @@ public class GameWindow extends JFrame {
 		this.engine.enableDropShadow(!this.engine.getDropShadowEnabled());
 	}
 	public void newGame() {
-		if (this.args != null) this.main(args);
-		else this.main(new String[] {Integer.toString(this.gameState.length),Integer.toString(this.gameState[0].length)});
+		if (this.args != null) GUI.main(args);
+		else GUI.main(new String[] {Integer.toString(this.gameState.length),Integer.toString(this.gameState[0].length)});
 		this.nextShape.dispose();
 		this.swapShape.dispose();
 		this.dispose();
@@ -164,31 +175,30 @@ public class GameWindow extends JFrame {
 		this.updateScreen();;
 	}
 	public void toggleAI() {
-		if (this.ai == null) return;
+		if (this.ai == null) {
+			System.err.println ("Null AI");
+			return;
+		}
 		if (!this.ai.isRunning()) {
-			this.ai.run(this.engine);;
+			this.ai.start ();
 		} else this.ai.stop();
 	}
-	public void connectAI(HeuristicAI ai) {
+	public void connectAI(AIBacktrack ai) {
 		this.ai = ai;
 	}
 	public void probeSolution () {
-		this.ai.testSolution(this.engine);
-	}
-	private static void createAI(Engine engine, GameWindow gw, final int AISpeed, final boolean plummit) {
-		final Engine eng = engine;
-		final GameWindow gwin = gw;
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					HeuristicAI ai = new HeuristicAI(AISpeed, plummit);
-					gwin.connectAI(ai);
-					
-				} catch (Exception e) {
-					e.printStackTrace();
-				}	
-			}
-		});
+		if (germanMode > 0) {
+			GameState testState = new GameState (new EngineInterface(engine));
+			GameState.dumpState(testState, true);
+			if (germanMode >= 2) testState = new GameState (ShapeTransforms.predictCompleteDrop(testState));
+			GameState.dumpState(testState, true);
+			ComputedValue values = SolutionValue.getSolutionParameters(testState);
+			double finalVal = SolutionValue.calculateSolution(testState, values);
+			System.out.println ("Value after a Complete Drop:");
+			System.out.println ("VALUE: " + finalVal);
+			System.out.println ("SHAPETYPE: " + testState.getShape().getType());
+			System.out.println (values.dump());
+		}
 	}
 	private void impossible() {
 		this.engine.impossible();
@@ -199,120 +209,30 @@ public class GameWindow extends JFrame {
 	private void swapShapes() {
 		this.engine.swapShapes();
 	}
+	private void toggleGermanMode () {
+		germanMode = (++germanMode) % 3;
+		System.out.println("GERMAN MODE LEVEL: " + germanMode + ((germanMode > 0) ? "[ON]" : "[OFF]"));
+	}
 	private void pause() {		
 		this.engine.pause();
-		if (this.engine.isPaused()) this.ai.stop();		
+		if (this.engine.isPaused() && this.ai != null) this.ai.stop();		
 	}
 	private void requestShape(SHAPETYPE type) {
 		this.engine.requestNextShape(type);
 	}
-	public static void main(String[] args) {
-		System.out.println("Loading...");
-		final String[] dim = args;
-		final int DEFAULTROWS = 16;
-		final int DEFAULTCOLUMNS = 10;
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				int AISpeed = 50;
-				String historyFile = null; 
-				try {
-					int rows = DEFAULTROWS;
-					int columns = DEFAULTCOLUMNS;
-					int logLevel = 0;
-					boolean plummit = false;
-					for (int i=0;i<dim.length;i++) {
-						if (dim [i].equals("-plummit")) {
-							plummit = true;
-						} else if (dim [i].equals("-l")) {
-							try {
-								i++;
-								logLevel = Integer.parseInt(dim[2]);									
-							} catch (ArrayIndexOutOfBoundsException e0) {						
-							} catch (NullPointerException e1) {						
-							} catch (NumberFormatException e2) {
-								try {
-									historyFile = dim [2];
-								} catch (ArrayIndexOutOfBoundsException e3) {}
-									
-							}
-							Level level = Level.OFF;
-							switch (logLevel) {
-							case 0 : {level = Level.OFF; break;}
-							case 1 : {level = Level.SEVERE; break;}
-							case 2 : {level = Level.WARNING; break;}
-							case 3 : {level = Level.INFO; break;}
-							case 4 : {level = Level.FINE; break;}
-							case 5 : {level = Level.FINER; break;}
-							case 6 : {level = level.FINEST; break;}
-							case 7 : {level = level.CONFIG; break;}
-							case 8 : {level = level.ALL; break;}
-							default : {
-								level = level.ALL;
-								break;
-								}
-							}
-							TetrisLogger.setup(level);
-						}
-						else if (dim [i].equals("-t")) {
-							try {
-								int speed = Integer.parseInt(dim [i+1]);
-								System.out.println("AI Speed: " + speed);
-								AISpeed = speed;
-							} catch (NumberFormatException e2) {
-								System.out.println("option -t (AI SPEED) requires an integer argument, usually 30 <= i <= 100");
-							}
-						}
-						else if (dim [i].equals("-s")) {
-							try {
-								try {
-									rows = Integer.parseInt(dim[i+1]);
-									columns = Integer.parseInt(dim[i+2]);
-									i += 2;
-								} catch (ArrayIndexOutOfBoundsException e0) {
-									rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
-								} catch (NullPointerException e1) {
-									rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
-								} catch (NumberFormatException e2) {
-									rows = DEFAULTROWS; columns = DEFAULTCOLUMNS;
-								} finally {
-									//frame.updateScreen();
-								}
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}
-					GameWindow frame = new GameWindow(rows,columns, historyFile, AISpeed, plummit);
-					frame.setVisible(true);
-					frame.args = dim;
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.err.println("ERROR: Failed to start game.");
-					throw new RuntimeException ();
-				}
-			}
-		});
+	protected static void afterInit (GameWindow gw) {
+		gw.setVisible(true);
 	}
-
 	/**
 	 * Create the frame."ERROR: SolutionNode: Owner not found"
 	 */
-	public GameWindow(int rows, int columns, String historyFile, int AISpeed, boolean plummit) {
-
+	public GameWindow (GUI gui) {
+		this.ai = gui.ai;
+		this.engine = gui.eng;
+		this.args = gui.args;
 		int scale = 30;
 		System.out.println("Starting.. ");
-        this.engine = new Engine(rows,columns,500,new CallBackMessenger(this));
-        if (historyFile != null) {
-        	this.engine.pause();
-        	try {
-				this.replay = Journal.readJournal(historyFile).getHistory();
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.err.println("ERROR: could not read history file, will exit");
-				this.dispose();
-			}
-        }
-		this.gameBoard = new Board(rows,columns,scale,this.engine);
+		this.gameBoard = new Board(gui.rows,gui.cols,scale,engine);
         add(this.gameBoard);
         this.pack();
         setTitle("Mega Tetris - 0 Lines Cleared");
@@ -320,8 +240,8 @@ public class GameWindow extends JFrame {
         setLocationRelativeTo(null);        
         setVisible(true);
         setResizable(true);
-        this.gameState = new int[rows][columns];        
-        this.createAI(this.engine, this, AISpeed, plummit);
+        this.gameState = new int[gui.rows][gui.cols];        
+        setTitle();
         this.requestFocus();
 		this.addKeyListener(new KeyAdapter() {
 			private boolean holdInput = false;
@@ -376,14 +296,14 @@ public class GameWindow extends JFrame {
 					if (!this.holdcRotate) {
 						this.holdcRotate = true;
 						if(!this.holdInput)rotateClockwise();
-						if (germanMode) probeSolution();
+						if (germanMode > 0) probeSolution();
 					}
 				}
 				else if (key == 'e' || key == 'E') {
 					if (!this.holdccRotate) {
 						this.holdccRotate = true;
 						if(!this.holdInput)rotateCounterClockwise();
-						if (germanMode) probeSolution();
+						if (germanMode > 0) probeSolution();
 					}
 				}
 				else if (key == 'p' || key == 'P') {
@@ -396,7 +316,7 @@ public class GameWindow extends JFrame {
 					if(!this.holdInput)shiftLeft();
 				}
 				else if (key == 'g' || key == 'G') {
-					if(!this.holdInput)setGravity(800);
+					if(!this.holdInput) toggleGermanMode() ;
 				}
 				else if (key == 'd' || key == 'D') {
 					if(!this.holdInput)shiftRight();
@@ -417,8 +337,7 @@ public class GameWindow extends JFrame {
 					probeSolution();
 				}
 				else if (key == '9') {
-					germanMode = !germanMode;
-					System.out.println("GERMAN MODE " + ((germanMode) ? "ON" : "OFF"));
+					toggleGermanMode();
 				}
 				// new
 				try {
@@ -437,32 +356,28 @@ public class GameWindow extends JFrame {
 					if (this.holdInput) return;
 					if (arg0.getKeyCode() == KeyEvent.VK_LEFT) {						
 						if(!this.holdInput)shiftLeft();
-						if (germanMode) probeSolution();
+						if (germanMode>0) probeSolution();
 						return;
 					}
 					if (arg0.getKeyCode() == KeyEvent.VK_RIGHT) {
 						if(!this.holdInput)shiftRight();
-						if (germanMode) probeSolution();
-						return;
-					}
-					if (arg0.getKeyCode() == KeyEvent.VK_RIGHT) {
-						if(!this.holdInput)rotateClockwise();
+						if (germanMode>0) probeSolution();
 						return;
 					}
 					if (arg0.getKeyCode() == KeyEvent.VK_DOWN) {
 						if (drop()) {
 						}
-						if (germanMode) probeSolution();
+						if (germanMode>0) probeSolution();
 						return;
 					}
 					if (arg0.getKeyCode() == KeyEvent.VK_SHIFT) {
 						if(!this.holdInput)rotateClockwise();
-						if (germanMode) probeSolution();
+						if (germanMode>0) probeSolution();
 						return;
 					}
 					if (arg0.getKeyCode() == KeyEvent.VK_SPACE) {
 						if(!this.holdInput)swapShapes();
-						if (germanMode) probeSolution();
+						if (germanMode>0) probeSolution();
 						return;
 					}
 					if (arg0.getKeyCode() == KeyEvent.VK_CAPS_LOCK) {
@@ -474,20 +389,57 @@ public class GameWindow extends JFrame {
 			}			
 		});
 		if (replay != null) {
-			ArrayList<GameState> tempBuffer = (ArrayList<GameState>) replay.clone();
-			while (tempBuffer.size() > 0) {
-				GameState currentState = tempBuffer.get(0);
-				tempBuffer.remove(0);
-				updateShapeBoards(SHAPETYPE.intToShapeType(currentState.getOtherShapeData()[1]), SHAPETYPE.intToShapeType(currentState.getOtherShapeData()[2]));
-				gameBoard.updateScreen(currentState.getBoardWithCurrentShape().getState());
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
+			System.out.println ("Found a replay that is " + replay.size() + " items long.");
+			Thread replayThread = new Thread (new ReplayWalker (replay, 50));
+			replayThread.start();
 		}
 	}
-
+	class ReplayWalker implements Runnable {
+		ArrayList<GameState> replay = null;
+		int replaySpeed = 30;
+		ReplayWalker (ArrayList<GameState> replay, int replaySpeed) {
+			this.replay = (ArrayList<GameState>) replay.clone();
+			this.replaySpeed = replaySpeed;
+		}
+		@Override
+		public void run() {
+			try {
+				Thread.sleep(replaySpeed + 20);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			if (replay != null) {
+				GameState currentState = null;
+				while (replay.size() > 0) {
+					System.out.println ("Stepping through the replay");
+					currentState = replay.get(0);
+					replay.remove(0);
+					while (gameBoard == null || nextShape == null || swapShape == null) {
+						try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					updateShapeBoards(SHAPETYPE.intToShapeType(currentState.getOtherShapeData()[1]), SHAPETYPE.intToShapeType(currentState.getOtherShapeData()[2]));
+					gameBoard.updateScreen(currentState.getBoardWithCurrentShape().getState());
+					try {
+						Thread.sleep(90);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				if (currentState != null) {
+					for (int i=0;i<currentState.getBoardSize()[0];i++) {
+						for (int j=0;j<currentState.getBoardSize()[1];j++) {
+							engine.colorSpace(i, j, currentState.getBoardWithoutCurrentShape().getState()[i][j]);							
+						}
+					}
+					engine.requestNextShape( tetris.engine.shapes.SHAPETYPE.intToShapeType(currentState.getShape().getType().toInt()));
+				}
+			}
+			if (engine.isPaused()) engine.pause();
+		}			
+	}
 }

@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import ai.logic.SolutionNodeFullBackTrack.SolutionDir;
 import ai.state.GameState;
 import ai.transformations.BoardTransforms;
 import ai.transformations.ShapeTransforms;
@@ -344,14 +343,11 @@ public class SolutionNodeFullBackTrack {
 	public int getSolutionVal() {
 		return this.ourSolution;
 	}
-	public int[][] getCoords() {
-		return this.ourState.getShape().getCoordsCopy();
-	}
 	public static int[][] getSolutionCoords () {
 		if (solutionOwner == null) {
 			return new int[1][3];
 		} else {
-			return solutionOwner.getCoords();
+			return solutionOwner.ourState.getShape().getCoords();
 		}
 	}
 	public static int[][] getSolution () {
@@ -386,9 +382,9 @@ public class SolutionNodeFullBackTrack {
 		protected static SolutionNodeFullBackTrack getNode(GameState inState) {
 			int [][] coords = inState.getShape().getCoords();
 			for (SolutionNodeFullBackTrack node : knownSolutionNodes) {
-				if(Arrays.deepEquals(node.getCoords(),coords)) {
-					return node;
-				}
+			//	if(Arrays.deepEquals(node.getCoords(),coords)) {
+				//	return node;
+				//}
 			}
 			return null; // does not exist yet
 		}
