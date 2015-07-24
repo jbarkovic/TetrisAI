@@ -485,6 +485,7 @@ public class Engine implements Tetris{
 		this.gravity = g;
 	}
 	private void newShape() {
+		if (this.isGameLost()) return;
 		LOGGER.info("NEW Shape");
 		this.holdDrops = true;		
 		synchronized (accessLock) {
