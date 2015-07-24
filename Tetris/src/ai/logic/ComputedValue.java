@@ -12,6 +12,7 @@ public class ComputedValue {
 	public int badGapBesideShape;
 	public int coveredFactor;
 	public int density;
+	public double proximityToSpawn;
 	
 	public String dump () {
 		String out = "\n";
@@ -28,6 +29,7 @@ public class ComputedValue {
 		out += String.format("%-30s  %d\n", "BURIED FACTOR",buriedFactor);
 		out += String.format("%-30s  %d\n", "BAD GAP BESIDE SHAPE",badGapBesideShape);
 		out += String.format("%-30s  %d\n", "COVERED FACTOR",coveredFactor);
+		out += String.format("%-30s  %d\n", "PROXIMITY TO SPAWN",proximityToSpawn);
 		out += "===========================================\n";
 		out += "===========================================\n";
 		return out;
