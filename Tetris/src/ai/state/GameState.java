@@ -44,6 +44,12 @@ public class GameState implements java.io.Serializable {
 	public BoardState getBoardWithoutCurrentShape () {
 		return this.boardWithoutCurrentShape;
 	}
+	public int numColumns() {
+		return this.getBoardSize()[1];
+	}
+	public int numRows() {
+		return this.getBoardSize()[0];
+	}
 	public ShapeState getShape () {
 		return this.currentShape;
 	}
