@@ -1,13 +1,15 @@
 package interfaces;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 
 import ai.logic.AIBacktrack;
+import ai.state.GameState;
 import tetris.engine.mechanics.Engine;
 import tetris.logging.TetrisLogger;
 
-public class UI {
+public class UI implements Watcher {
 	public final int rows;
 	public final int cols;
 	public final int AISpeed;
@@ -15,7 +17,6 @@ public class UI {
 	public final String historyFile;
 	public String [] args = null;
 	public CallBackMessenger cback;
-	public Engine eng;
 	public EngineInterface engine;
 	public AIBacktrack ai; 
 	public static UI produceUI (String[] args) {
@@ -23,7 +24,7 @@ public class UI {
 		final String[] dim = args;
 		final int DEFAULTROWS = 16;
 		final int DEFAULTCOLUMNS = 10;
-		int AISpeed = 50;
+		int AISpeed = 80;
 		String historyFile = null; 
 		try {
 			int rows = DEFAULTROWS;
@@ -108,13 +109,12 @@ public class UI {
 			throw new RuntimeException ();
 		}
 	}
-	protected void createAI(final Engine engine, final CallBackMessenger cback, final int AISpeed, final boolean plummit) {
-		ai = new AIBacktrack(engine, AISpeed, plummit);
-		cback.addAI(ai);					
-	}
 	public void update () {		
 	}
 	public static void afterInit (int rows, int columns, String historyFile, int AISpeed, boolean plummit) {		
+	}
+	public GameState getState () {
+		return new GameState(engine);
 	}
 	public UI (int rows, int columns, String historyFile, int AISpeed, boolean plummit) {
 		this.rows = rows;
@@ -122,21 +122,18 @@ public class UI {
 		this.historyFile = historyFile;
 		this.AISpeed = AISpeed;
 		this.usePlummit = plummit;
-		cback = new CallBackMessenger (this);
-		this.eng = new Engine(rows,columns,500,cback);
-		this.engine = new EngineInterface (this.eng);
-		if (historyFile != null) {
-			this.eng.pause();
-			/*try {
-				System.out.println ("We were given a replay file");
-				//this.replay = Journal.readJournal(historyFile).getHistory();
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.err.println("ERROR: could not read history file, will exit");
-				//this.dispose();
-			}*/
-        }
-        createAI(this.eng, cback, AISpeed, plummit);
+		ArrayList<Watcher> watchers = new ArrayList<Watcher> (4);
+		watchers.add(this);
+		this.cback = new CallBackMessenger (watchers);
+		this.engine = new EngineInterface (rows, columns, 500, cback);
+		this.cback.linkEngine(engine);
+		engine.setDelay(AISpeed);
+		ai = new AIBacktrack();
+		cback.addAI(ai);
+	}
+	@Override
+	public void notifyWatcher() {
+		update ();
 	}
 }
 

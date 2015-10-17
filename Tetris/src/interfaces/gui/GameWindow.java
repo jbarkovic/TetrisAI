@@ -12,6 +12,7 @@ import javax.swing.JFrame;
 
 import ai.logic.AIBacktrack;
 import ai.logic.ComputedValue;
+import ai.logic.SolutionNode;
 import ai.logic.SolutionValue;
 import ai.state.GameState;
 import ai.state.Journal;
@@ -40,6 +41,8 @@ public class GameWindow extends JFrame {
 	private AIBacktrack ai;
 	private int germanMode = 0;
 	public String [] args = null;
+	private GUI guiClass;
+	private InfoWindow infoWindow;
 	
 	static {
 		Logger logger = Logger.getGlobal();
@@ -94,7 +97,6 @@ public class GameWindow extends JFrame {
 		if (this.oldLinesCleared < this.engine.getLinesCleared()) {
 			if (this.engine.getLinesCleared() % 10 == 0) {
 				int oldGravity = this.engine.getGravity();				
-				System.out.println("Setting gravity to: " + (oldGravity - 10));
 			}
 			this.oldLinesCleared = this.engine.getLinesCleared();
 			setTitle();
@@ -178,27 +180,39 @@ public class GameWindow extends JFrame {
 		if (this.ai == null) {
 			System.err.println ("Null AI");
 			return;
+		} else if (this.guiClass.cback.isAIRunning()) {
+			this.guiClass.cback.stopAI();
+		} else {
+			this.guiClass.cback.startAI();
 		}
-		if (!this.ai.isRunning()) {
-			this.ai.start ();
-		} else this.ai.stop();
 	}
 	public void connectAI(AIBacktrack ai) {
 		this.ai = ai;
 	}
 	public void probeSolution () {
-		if (germanMode > 0) {
-			GameState testState = new GameState (new EngineInterface(engine));
+		/*if (germanMode > 0) {
+			GameState testState = new GameState (EngineInterface());
 			GameState.dumpState(testState, true);
 			if (germanMode >= 2) testState = new GameState (ShapeTransforms.predictCompleteDrop(testState));
 			GameState.dumpState(testState, true);
-			ComputedValue values = SolutionValue.getSolutionParameters(testState);
-			double finalVal = SolutionValue.calculateSolution(testState, values);
+			ComputedValue values = new SolutionValue().getSolutionParameters(testState);
+			double finalVal = new SolutionValue().calculateSolution(testState, values);
 			System.out.println ("Value after a Complete Drop:");
 			System.out.println ("VALUE: " + finalVal);
 			System.out.println ("SHAPETYPE: " + testState.getShape().getType());
 			System.out.println (values.dump());
+			
+		
+		}*/
+	}
+	private GameState overlay (GameState top, GameState bottom) {
+		GameState overlay = new GameState(top);
+		int [][] gB = bottom.getBoardWithCurrentShape().getState();
+		for (int [] coord : bottom.getShape().getCoords()) {
+			overlay.getBoardWithCurrentShape().getState()[coord[0]][coord[1]] = -1;
 		}
+		overlay.invalidate();
+		return overlay;
 	}
 	private void impossible() {
 		this.engine.impossible();
@@ -215,7 +229,7 @@ public class GameWindow extends JFrame {
 	}
 	private void pause() {		
 		this.engine.pause();
-		if (this.engine.isPaused() && this.ai != null) this.ai.stop();		
+		if (this.engine.isPaused() && this.guiClass != null) this.guiClass.cback.stopAI();		
 	}
 	private void requestShape(SHAPETYPE type) {
 		this.engine.requestNextShape(type);
@@ -226,13 +240,15 @@ public class GameWindow extends JFrame {
 	/**
 	 * Create the frame."ERROR: SolutionNode: Owner not found"
 	 */
-	public GameWindow (GUI gui) {
+	public GameWindow (final GUI gui) {
 		this.ai = gui.ai;
-		this.engine = gui.eng;
+		this.engine = gui.engine.getEngine();
 		this.args = gui.args;
+		guiClass = gui;
 		int scale = 30;
 		System.out.println("Starting.. ");
 		this.gameBoard = new Board(gui.rows,gui.cols,scale,engine);
+		infoWindow.start();
         add(this.gameBoard);
         this.pack();
         setTitle("Mega Tetris - 0 Lines Cleared");
@@ -335,6 +351,25 @@ public class GameWindow extends JFrame {
 				}
 				else if (key == 'm' || key == 'M') {
 					probeSolution();
+				}
+				else if (key == '+') {
+					int oldValue = gui.engine.getDelay();
+					int increment = (int)Math.ceil(oldValue*0.15);
+					int newValue = oldValue + increment;
+					if (newValue == 0) newValue = 1;
+					if (newValue > oldValue) {
+						System.out.println("AI Delay: " + newValue);
+						gui.engine.setDelay(newValue);
+					}
+				}
+				else if (key == '-') {
+					int oldValue = gui.engine.getDelay();
+					int increment = (int)Math.ceil(oldValue*0.15);
+					int newValue = oldValue - increment;
+					if (newValue < oldValue && newValue >= 0) {
+						System.out.println("AI Delay: " + newValue);
+						gui.engine.setDelay(newValue);
+					}
 				}
 				else if (key == '9') {
 					toggleGermanMode();

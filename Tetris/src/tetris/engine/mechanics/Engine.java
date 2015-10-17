@@ -3,9 +3,13 @@ package tetris.engine.mechanics;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Timer;
+
 import tetris.engine.shapes.*;
 
 
@@ -36,14 +40,16 @@ public class Engine implements Tetris{
 	private boolean gameOver = false;
 	private CallBack callBackMessenger;
 	private Space[] startSpaces;
+	private int numShapes = 0;
 	private Shape[] shapeBuffer;
 	private SHAPETYPE nextShapeRequest;
 	private Object accessLock = new Object();
+	private ShapeStats shapeStats = new ShapeStats();
 	Random random = new Random();
 
 	private final static Logger LOGGER = Logger.getLogger(Engine.class.getName());
 	static {
-		LOGGER.setLevel(Logger.getGlobal().getLevel());		
+		LOGGER.setLevel(Level.OFF);		
 	}
 
 	public enum ShapeType {
@@ -484,6 +490,16 @@ public class Engine implements Tetris{
 	protected void connectGravity(Gravity g) {
 		this.gravity = g;
 	}
+	public void printShapeStats () {
+		if (this.shapeStats != null) {
+			HashMap<ShapeType, Double> stats = shapeStats.getStats();
+			System.out.println("Shape Stats: for: " + this.shapeStats.getHistoryLength() + " shapes:");
+			System.out.println("\tTYPE\tPERCENTAGE");
+			for (Map.Entry<Engine.ShapeType, Double> entry : stats.entrySet()) {
+				System.out.println("\t" + entry.getKey() + "\t" + String.format("%.2f",entry.getValue()*100) + "%");
+			}
+		}
+	}
 	private void newShape() {
 		if (this.isGameLost()) return;
 		LOGGER.info("NEW Shape");
@@ -491,12 +507,19 @@ public class Engine implements Tetris{
 		synchronized (accessLock) {
 			for (Space sp : this.startSpaces) {
 				if (sp.getColor() != EMPTYCOLOR) {
+					
+					//printShapeStats ();
 					this.gameOver = true;
 					this.holdDrops = false;	
 					LOGGER.warning("GAME OVER");
 					this.wasThereNewShape = true;
 					return; // so the last lines of this method are still executed on gameover event
 				}
+			}
+			numShapes++;
+
+			if (numShapes % 101 == 0) {
+				//printShapeStats ();
 			}
 			if (this.swappedShape == null) {
 				LOGGER.info("Generating swap shape...");
@@ -616,9 +639,10 @@ public class Engine implements Tetris{
 				this.nextShape = drawShape(this.nextShapeGrid, this.chooseShape()); 
 				this.swapShapes = false;
 			}
+			if (this.currentShape!=null)shapeStats.addShape(this.currentShape.getType());
 			this.holdDrops = false;
 			this.wasThereNewShape = true;
-			this.callBackMessenger.ringBell();
+			this.callBackMessenger.newShape();
 			this.setDropShadow();
 		}
 	}

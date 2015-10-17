@@ -91,10 +91,6 @@ public class UIFactory {
 							}
 						}
 					}
-					//ui.getClass()
-					//(rows,columns, historyFile, AISpeed, plummit);
-					//afterInit (ui);
-					//ui.args = dim;
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.err.println("ERROR: Failed to start game.");

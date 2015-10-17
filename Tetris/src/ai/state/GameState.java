@@ -3,6 +3,10 @@ package ai.state;
 import interfaces.EngineInterface;
 
 public class GameState implements java.io.Serializable { 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8546689583783367961L;
 	private BoardState boardWithCurrentShape 	= null;
 	private BoardState boardWithoutCurrentShape	= null;
 	private ShapeState currentShape 			= null;
@@ -14,9 +18,11 @@ public class GameState implements java.io.Serializable {
 		this (new BoardState (engine.getGameBoard()), new ShapeState (engine.getCoordsOfCurrentShape(), engine.getCurrentShape()));
 	}
 	public GameState (BoardState bState, ShapeState sState) {
+		this();
 		init (bState, sState);
 	}
-	public GameState (GameState old) {		
+	public GameState (GameState old) {
+		this();
 		init (old.getBoardWithoutCurrentShape(), old.currentShape);
 	}
 	public void setState (BoardState bState, ShapeState sState) {
@@ -72,15 +78,19 @@ public class GameState implements java.io.Serializable {
 	public void invalidate () {
 		setState (this.boardWithoutCurrentShape, currentShape);
 	}
+	public int hashCode () {
+		return (new String ("" + this.boardWithCurrentShape.getState())).hashCode();
+	}
 	public static String dumpState (GameState inState, boolean printToOut) {
-		String message = "===============================================V\n";
-		message += "Game State Dump: \n";
-		message += "BoardWithCurrentShape\n";
-		message += inState.boardWithCurrentShape.dumpBoard();
-		message += "\nBoardWithOUTCurrentShape\n";
-		message += inState.boardWithoutCurrentShape.dumpBoard();
-		message += "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
-		if (printToOut) System.out.println(message);
-		return message;
+		StringBuilder message = new StringBuilder ("");
+		message.append("===============================================V\n");
+		message.append("Game State Dump: \n");
+		message.append("BoardWithCurrentShape\n");
+		message.append(inState.boardWithCurrentShape.dumpBoard());
+		message.append("\nBoardWithOUTCurrentShape\n");
+		message.append(inState.boardWithoutCurrentShape.dumpBoard());
+		message.append("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+		if (printToOut) System.out.println(message.toString());
+		return message.toString();
 	}
 }

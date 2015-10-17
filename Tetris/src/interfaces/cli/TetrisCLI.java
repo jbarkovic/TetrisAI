@@ -1,53 +1,45 @@
 package interfaces.cli;
 
-import java.awt.EventQueue;
-
 import ai.state.GameState;
 import interfaces.UI;
 
 public class TetrisCLI extends UI {
 	private final int printInterval = 200;
 	private int printCount = 0;
+	private TetrisCurses progressWriter = new TetrisCurses();
 	public static void main (String [] args) {
 		final UI ui = UI.produceUI(args);
 		if (ui != null) {
-			//EventQueue.invokeLater(new Runnable () {
-				//public void run () {
-					TetrisCLI tcli = new TetrisCLI (ui);
-					tcli.start();
-					tcli.cback.ringBell();
-				//}				
-			//});
+			TetrisCLI tcli = new TetrisCLI (ui);
+			tcli.start();
+			tcli.cback.ringBell();
 		}
 	}
 	private void start () {
-		if (eng != null && !eng.isPaused()) eng.pause();
 		if (ai != null) {
-			ai.start();
-			eng.plummit();
-			//ai.step();
+			cback.startAI();
+			engine.swapShapes();
 		} else {
 			System.err.println ("NULL AI");
 		}
 	}
 	@Override
 	public void update () {
-		if (eng == null) {
+		if (engine == null) {
 			System.err.println ("NULL ENGINE in CLI update()");
 		} else if (printCount == printInterval) {
-			System.out.println ("Lines Cleared: " + eng.getLinesCleared());
+			progressWriter.printMessage("Lines Cleared: " + engine.getNumberOfRowsCleared());
 			printCount = 0;
-		} else if (eng.isGameLost()) {
-			if (!eng.isPaused()) eng.pause();
+		} else if (engine.isGameLost()) {
 			GameState finalState = new GameState (engine);
-			System.err.println ("Game Over: " + eng.getLinesCleared() + " lines");
+			System.err.println ("Game Over: " + engine.getNumberOfRowsCleared() + " lines");
 			GameState.dumpState(finalState, true);
 		}
 		printCount++;
 	}
 	public TetrisCLI (UI ui) {
 		super (ui.rows,ui.cols,ui.historyFile,ui.AISpeed,ui.usePlummit);
-		eng.pause();
+		engine.pause();
 		System.out.println("Starting CLI.. ");	
 	}
 }

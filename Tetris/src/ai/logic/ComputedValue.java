@@ -11,8 +11,8 @@ public class ComputedValue {
 	public int buriedFactor;
 	public int badGapBesideShape;
 	public int coveredFactor;
-	public int density;
 	public double proximityToSpawn;
+	public double density;
 	
 	public String dump () {
 		String out = "\n";

@@ -8,13 +8,18 @@ import javax.swing.Timer;
 import tetris.engine.mechanics.Engine;
 
 public class EngineInterface {
+	private int [][] lastFewPatterns = new int [6][];
 	private Engine engine;
 	private int controlMovementDelay = 30;
 	private ControlMovements sequenceBuffer = new ControlMovements ();
 	private Stepper sequenceStepper;
 	private Object accessLock = new Object();
 	
-	public EngineInterface (Engine engine) {
+	public EngineInterface (int rows, int cols, int speed, CallBackMessenger cback) {
+		engine = new Engine(rows,cols,speed,cback);
+		for (int i=0;i<lastFewPatterns.length;i++) {
+			lastFewPatterns[i] = new int [3];
+		}
 		this.engine = engine;
 		sequenceStepper = new Stepper (controlMovementDelay);
 		sequenceStepper.run();
@@ -25,11 +30,27 @@ public class EngineInterface {
 		sequenceStepper.setDelay(controlMovementDelay);
 		return oldDelay;
 	}
+	public Engine getEngine () {
+		return engine;
+	}
 	private void stepSequence () {
 	//	System.out.println ("in step");
 		if (sequenceBuffer.hasNext()) {
 			//System.out.println ("STEPPING");
-			executePatterns (sequenceBuffer.next());
+			boolean overBefore = engine.isGameLost();
+			for (int i=lastFewPatterns.length-1;i>0;i--) {
+				if (!overBefore) lastFewPatterns[i] = lastFewPatterns[i-1];
+			}
+			lastFewPatterns[0] = sequenceBuffer.next();
+			executePatterns (lastFewPatterns[0]);
+			boolean overNow = engine.isGameLost();
+			if (!overBefore && overNow) {
+				System.out.println("Last " + lastFewPatterns.length + " controll movements: ");
+				for (int i=0;i<lastFewPatterns.length;i++) {
+					int [] patt = lastFewPatterns[i];
+					if (patt!=null && patt.length==3) System.out.println("{"+patt[0]+","+patt[1]+","+patt[2]+"}");
+				}
+			}
 		}
 	}
 	public void executeSequence (ControlMovements sequence) {
@@ -148,6 +169,9 @@ public class EngineInterface {
 			}	
 			return true;
 		}
+	public int getNumberOfRowsCleared () {
+		return engine.getLinesCleared();
+	}
 	private class Stepper implements Runnable {
 		private int delay;
 		private Timer timer;
@@ -188,5 +212,9 @@ public class EngineInterface {
 				}*/
 			//}		
 		}
+	}
+	public void pause() {
+		engine.pause();
+		
 	}
 }

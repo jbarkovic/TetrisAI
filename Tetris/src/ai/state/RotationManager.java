@@ -1,6 +1,9 @@
 package ai.state;
 
 import interfaces.EngineInterface;
+
+import java.util.Arrays;
+
 import ai.transformations.ShapeTransforms;
 import tetris.engine.mechanics.Engine; // to drop the shape
 
@@ -26,10 +29,10 @@ public class RotationManager {
 				if (requirementsToRotate[i] != 0 && ! notCurrentShape) {
 
 					for (int j=0;j<requirementsToRotate[i];j++) {
-						if (ShapeTransforms.canDrop(inState)) {
+						/*if (ShapeTransforms.canDrop(inState)) {
 							engine.dropShape();
 							ShapeTransforms.predictDropOnce(inState);
-						}
+						}*/
 					}
 				}
 				knownShapePointer = i;
@@ -40,22 +43,25 @@ public class RotationManager {
 		int[][][] rotPatt = new int[4][4][2];
 		for (int i=0;i<4;i++) {
 			rotPatt[i] = engine.getCoordsOfCurrentShape().clone();
-			while (engine.forceRotate ()) {
+			while (engine.rotate ()) {
 				System.out.println("INFO: LEARN SHAPE: Needed to Drop SHAPETYPE: " + currType.toString() + " at index i= " + i);
 				didWeDrop ++;
 				engine.dropShape();
-				i=0; // Need to re-do the learn, so there is no weird offset				
+				engine.rotate();
+				engine.rotate();
+				engine.rotate();
+				i=-1; // Need to re-do the learn, so there is no weird offset
 			}
-			try {
-				Thread.sleep(40);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+
 		}
 		if (didWeDrop > 0) { // Correct for the drop (so that can rotate returns false when at the top of board)
+			System.out.println("We Dropped The shape");
 			for (int patt=0;patt<4;patt++) {
 				for (int coord=0;coord<4;coord++) {
-					rotPatt [patt][coord][0] --;
+					System.out.println("Before: Patt ["+patt+"] coord ["+coord+"] " + Arrays.toString(rotPatt[patt][coord]));
+					rotPatt [patt][coord][0] -= didWeDrop;
+					System.out.println("\t After: Patt ["+patt+"] coord ["+coord+"] " + Arrays.toString(rotPatt[patt][coord]));
+
 				}
 			}
 		}
@@ -74,7 +80,12 @@ public class RotationManager {
 		knownShapes = types;
 		knownShapePointer = rotatePatterns.length-1;
 		requirementsToRotate = requirements;
-		return rotatePatterns[knownShapePointer][0];
+		int [][] pattern = new int [4][];
+		for (int i=0;i<4;i++) {
+			pattern[i] = Arrays.copyOf(rotatePatterns[knownShapePointer][0][i], rotatePatterns[knownShapePointer][0][i].length);
+		//	pattern[i][0] += didWeDrop;
+		}
+		return pattern;
 	}
 	public static boolean doWeKnowShapeYet (SHAPETYPE checkShape) {
 		for (SHAPETYPE known : knownShapes) {
@@ -113,5 +124,15 @@ public class RotationManager {
 			}
 		}
 		return new int[][] {{-9000,-9000},{-9000,-9000},{-9000,-9000},{-9000,-9000}};
+	}
+	private class Pattern {
+		private ShapeState state;
+		private int dropValue;
+		public Pattern (ShapeState state, int dropValue) {
+			this.state = state;
+		}
+		public int getDropValue () {
+			return this.dropValue;
+		}
 	}
 }

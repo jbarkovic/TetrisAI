@@ -2,13 +2,10 @@ package ai.transformations;
 
 import java.util.logging.Logger;
 
-import tetris.engine.shapes.SHAPETYPE;
-import ai.logic.AIBacktrack;
-import ai.logic.SolutionMaster;
 import ai.state.*;
 
 public class ShapeTransforms {
-	private final static Logger LOGGER = Logger.getLogger(SolutionMaster.class.getName());
+	private final static Logger LOGGER = Logger.getLogger(ShapeTransforms.class.getName());
 	static {
 		LOGGER.setLevel(Logger.getGlobal().getLevel());		
 		//LOGGER.setLevel(Level.SEVERE);	
@@ -27,29 +24,28 @@ public class ShapeTransforms {
 			}
 			inState.setCurrentShape(newCurrentShape);
 		}
-		if (AIBacktrack.plummit) inState.invalidate ();
+		inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictDropOnce (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[0]++;
 		}
-		if (AIBacktrack.plummit) inState.invalidate ();
+		inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictShiftRight (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[1]++;
 		}
-	//	inState.invalidate ();
-		if (AIBacktrack.plummit) inState.invalidate ();
+		inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictShiftLeft (GameState inState) {		
 		for (int [] coord : inState.getShape().getCoords()) {
 			coord[1]--;
 		}
-		if (AIBacktrack.plummit) inState.invalidate ();
+		inState.invalidate ();
 		return inState;
 	}
 	public static GameState predictCompleteDrop(GameState inState) {
@@ -70,7 +66,7 @@ public class ShapeTransforms {
 				coord [0] += displacement;
 			}
 		}
-		if (AIBacktrack.plummit) inState.invalidate ();
+		inState.invalidate ();
 		return inState;
 	}
 	public static int[] getShapeLimits(GameState inState) { // returns {minCol,MaxCol,MinRow,MaxRow)
@@ -94,6 +90,7 @@ public class ShapeTransforms {
 				LOGGER.severe("ERROR:\t\t\tNo next rotate pattern found!");
 				return false;			
 			} else if (coord[0] > gB.length-1 || coord[1] > gB[0].length-1 || coord[0] < 0 || coord[1] < 0){
+				if (coord[0] < 0) System.out.println("Correctly detected that we could not rotate");
 				return false;
 			} else if (gB[coord[0]][coord[1]] != 0) {
 				return false;

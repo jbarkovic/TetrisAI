@@ -1,8 +1,10 @@
 package tetris.engine.shapes;
+import tetris.engine.mechanics.Engine;
 import tetris.engine.mechanics.Space;
 
 public class Straight extends Shape{
 	private RotatePositions rotateState;
+	protected final Engine.ShapeType type = Engine.ShapeType.I; 
 	private static int LocalShapeColor = 6;
 	private enum RotatePositions {
 		UP, RIGHT
@@ -22,7 +24,9 @@ public class Straight extends Shape{
 		return new Straight (gameBoard);
 	}
 
-
+	public Engine.ShapeType getType () {
+		return type;
+	}
 	public boolean rotateForward() {
 		if (!this.canRotate()) return false;
 		int[] coordsOfOld_0_Space = this.getCoordsOfSpace(this.spaces[0]);

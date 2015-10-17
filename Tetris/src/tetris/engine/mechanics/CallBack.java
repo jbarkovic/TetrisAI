@@ -17,4 +17,7 @@ public class CallBack {
 	public void ringBell() {
 		// interface call back goes here
 	}
+	public void newShape() {
+		
+	}
 }

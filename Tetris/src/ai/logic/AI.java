@@ -13,4 +13,5 @@ public abstract class AI {
 	public abstract void dumpSolution(String[] messages);
 	public abstract void usePlummit(boolean val);
 	public abstract boolean getUsePlumit();
+	public abstract void auditPlacement();
 }

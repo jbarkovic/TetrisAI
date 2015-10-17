@@ -20,7 +20,7 @@ public class ShapeState implements Comparable<ShapeState>, Serializable {
 		return memory;
 	}
 	public ShapeState (int [][] coords, SHAPETYPE type) {
-		if (memory != null) System.out.println ("Previous memory size before clear: " + memory.size());
+		//if (memory != null) LOGGER.info ("Previous memory size before clear: " + memory.size());
 		clearMemory ();
 		this.init (coords, type);
 	}

@@ -3,6 +3,7 @@ package ai.logic;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,7 +18,7 @@ public class SolutionNode {
 	private GameState ourState;
 	private int recursionDepth = 0;
 	private String hash;
-	private int [][] solutionPattern = new int[30][3];
+	private ArrayList<int []> solutionPattern = new ArrayList<int []>(300);
 	private SolutionNode solutionOwner = null;
 
 	
@@ -63,15 +64,6 @@ public class SolutionNode {
 	}
 	private SolutionNode(GameState inState, SolutionNode parent, SolutionDir parentToUs, ShapeState _nextShape) {
 		this (inState,parent,parentToUs);
-		if (_nextShape != null && parent != null) {
-			try {
-				throw new Throwable ();
-			} catch (Throwable e) {
-				// TODO Auto-generated catch block
-			//	e.printStackTrace();
-			}
-			System.out.println ("ERROR parent is not null");
-		}
 		if (_nextShape != null) this.nextShape = new ShapeState (_nextShape);
 		else this.nextShape = null;
 	}
@@ -166,9 +158,10 @@ public class SolutionNode {
 				this.solFINAL = branch.Solve();
 			} else {*/
 				numBottoms++;
-				System.out.println ("Not following trail, numBottoms: " + numBottoms);
+				//System.out.println ("Not following trail, numBottoms: " + numBottoms);
 				reuseable = ShapeTransforms.predictCompleteDrop(reuseable);
-				this.solFINAL = SolutionValue.calculateSolution(this.ourState, SolutionValue.getSolutionParameters(reuseable));
+				// REmoved when SolutionMaster was deleted
+			//	this.solFINAL = (new SolutionValue()).calculateSolution(this.ourState, SolutionValue.getSolutionParameters(reuseable));
 			//}
 		}
 		
@@ -204,7 +197,7 @@ public class SolutionNode {
 	public void followSolution() {
 		this.solutionOwner = followSolution (this.solutionPattern, 0);
 	}
-	private SolutionNode followSolution (int [][] solutionPattern, int solutionPatternPointer) {
+	private SolutionNode followSolution (ArrayList<int[]> solutionPattern, int solutionPatternPointer) {
 		//solutionOwner = null;
 		int bestDistance = Integer.MAX_VALUE - 1;
 		this.nextMove = SolutionDir.PLUMMIT;
@@ -229,25 +222,19 @@ public class SolutionNode {
 		}
 		switch (this.nextMove) {
 			//TODO replace {0,0,-1}arrays with enums and/or constants defined in Solution Master;
-			case LEFT : 	{ solutionPattern[solutionPatternPointer++] = new int[] {0,-1,0}; /**LOGGER.info("LEFT")**/; break;}
-			case RIGHT : 	{ solutionPattern[solutionPatternPointer++] = new int[] {0,1,0}; /**LOGGER.info("RIGHT");**/ break;}
-			case DOWN : 	{ solutionPattern[solutionPatternPointer++] = new int[] {0,0,1}; /**LOGGER.info("DOWN")**/;break;}
-			case ROTATE1 : 	{ solutionPattern[solutionPatternPointer++] = new int[] {1,0,0}; /**LOGGER.info("ROTATE1");**/break;}
-			case PLUMMIT : 	{ solutionPattern[solutionPatternPointer++] = new int[] {0,0,-1}; /**LOGGER.info("PLUMMIT");**/LOGGER.info("Notice: adding a plummit to the pattern");if (this.next != null) LOGGER.info("was PLUMMIT, but have next move?");break;}
-			default : 		{ solutionPattern[solutionPatternPointer++] = new int[] {0,0,0}; LOGGER.info("Notice: using default for some reason");break;}
-		}
-		if (solutionPatternPointer == solutionPattern.length) {
-			int newLength = 5;
-			int [][] temp = Arrays.copyOf(solutionPattern, solutionPattern.length + newLength);
-			solutionPattern = temp;
-			for (int i=0;i<solutionPattern.length;i++) {
-				if (solutionPattern [i] == null) solutionPattern [i] = new int [3];
-			}
+			case LEFT : 	{ solutionPattern.add( new int[] {0,-1,0}); /**LOGGER.info("LEFT")**/; break;}
+			case RIGHT : 	{ solutionPattern.add( new int[] {0,1,0}); /**LOGGER.info("RIGHT");**/ break;}
+			case DOWN : 	{ solutionPattern.add( new int[] {0,0,1}); /**LOGGER.info("DOWN")**/;break;}
+			case ROTATE1 : 	{ solutionPattern.add( new int[] {1,0,0}); /**LOGGER.info("ROTATE1");**/break;}
+			case PLUMMIT : 	{ solutionPattern.add( new int[] {0,0,-1}); /**LOGGER.info("PLUMMIT");**/LOGGER.info("Notice: adding a plummit to the pattern");if (this.next != null) LOGGER.info("was PLUMMIT, but have next move?");break;}
+			default : 		{ solutionPattern.add( new int[] {0,0,0}); LOGGER.info("Notice: using default for some reason");break;}
 		}
 		if (this.next != null) {
 			this.next.followSolution(solutionPattern, solutionPatternPointer);
 		} // THE END OF THE RECURSION, ALSO THE LAST MOVE FOR THE CURRENT SHAPE
-		solutionOwner = this;	
+		else {
+			solutionOwner = this;
+		}
 		return this;
 	}
 	public boolean hasFoundSolution() {
@@ -267,14 +254,15 @@ public class SolutionNode {
 		}
 	}
 	public int[][] getSolution () {
+		return Arrays.copyOf(solutionPattern.toArray(new int [][] {{}}), solutionPattern.size());
 		//int end = solutionPatternPointer;
-		int [][] output = new int[solutionPattern.length][3];
+		/* [][] output = new int[solutionPattern.length][3];
 		for (int i=0;i<output.length;i++) {
-			output[i][0] = solutionPattern[i][0];
-			output[i][1] = solutionPattern[i][1];
-			output[i][2] = solutionPattern[i][2];
+			output[i][0] = solutionPattern.get(i)[0];
+			output[i][1] = solutionPattern.get(i)[1];
+			output[i][2] = solutionPattern.get(i)[2];
 		}
-		return output;
+		return output;*/
 	}
 	public String getLastKnownMessage () {
 		if (solutionOwner == null) return "Null Solution Owner";

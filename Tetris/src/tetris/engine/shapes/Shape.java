@@ -1,4 +1,5 @@
 package tetris.engine.shapes;
+import tetris.engine.mechanics.Engine;
 import tetris.engine.mechanics.Space;
 
 public class Shape {
@@ -8,6 +9,7 @@ protected int ShapeColor;
 protected int startColumnLeftMost;
 protected int startColumnRightMost;
 protected int verticalOffset;
+protected final Engine.ShapeType type = null;
 protected final int EMPTYCOLOR = 0;
 protected final int SHADOWCOLOR = 10;
 public Shape(Space[][] gameBoard) {	
@@ -23,6 +25,9 @@ public Shape(Space[][] gameBoard) {
 }
 public Shape getInstance(Space[][] gameBoard) {
 	return new Shape (gameBoard);
+}
+public Engine.ShapeType getType () {
+	return type;
 }
 public boolean containsSpace(int coords[]) {
 	for (Space sp : this.spaces) {

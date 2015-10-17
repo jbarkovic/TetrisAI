@@ -22,8 +22,6 @@ public class GUI extends UI{
 	}
 	public GUI (UI ui) {
 		super (ui.rows,ui.cols,ui.historyFile,ui.AISpeed,ui.usePlummit);
-		if (!ui.eng.isPaused()) ui.eng.pause();
-		System.out.println ("GUI Constructor");
 		gw = new GameWindow (this);
 		gw.setVisible(true);
 	}

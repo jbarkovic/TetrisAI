@@ -35,14 +35,8 @@ public class Board extends JPanel {
       boolean resized = false;
 
       Graphics2D g2 = (Graphics2D) g;
-
-      RenderingHints rh =
-            new RenderingHints(RenderingHints.KEY_ANTIALIASING,            				   
-                               RenderingHints.VALUE_ANTIALIAS_ON);
-
-      rh.put(RenderingHints.KEY_RENDERING,
-             RenderingHints.VALUE_RENDER_QUALITY);
-
+      
+      g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
       
       if (this.getWidth() != this.w || this.getHeight() != h) {
     	  resized = true;
@@ -79,13 +73,13 @@ public class Board extends JPanel {
         this.repaint();
     }
     private void updateSpaces(Graphics2D g2) {
-        Rectangle clipBounds = g2.getClipBounds();
+       // Rectangle clipBounds = g2.getClipBounds();
   		for (int row=0;row<this.rows;row++) {
   			for (int col=0;col<this.columns;col++) {
-  				if (clipBounds.contains(this.gameArray [row][col])) {
+  			//	if (clipBounds.contains(this.gameArray [row][col])) {
   					g2.setColor(this.getColor(gameState[row][col][0]));
   					g2.fill(this.gameArray[row][col]);
-  				}
+  				//}
   			}
   		}
     }
@@ -93,14 +87,10 @@ public class Board extends JPanel {
     	this.resizeBoard(g2);
         this.initializedYet = true;
     }
-    public Color getColor(int colorVal) {
-    	Color choose;
+    public Color getColor(final int colorVal) {
+    	Color choose = Color.white;
     	switch (colorVal) {
-    	case 0 : {
-    		choose = Color.white;
-    		//choose = setTransparency(Color.white,(float) 0.5);
-    		break;
-    		}
+    	case 0 : {break;}
     	case 1 : {choose = Color.red; break;}
     	case 2 : {choose = Color.blue; break;}
     	case 3 : {choose = Color.orange; break;}
