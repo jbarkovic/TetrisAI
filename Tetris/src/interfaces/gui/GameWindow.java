@@ -1,25 +1,17 @@
 package interfaces.gui;
-import java.awt.EventQueue;
 import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 
 import ai.logic.AIBacktrack;
-import ai.logic.ComputedValue;
-import ai.logic.SolutionNode;
-import ai.logic.SolutionValue;
 import ai.state.GameState;
-import ai.state.Journal;
-import ai.transformations.ShapeTransforms;
-import interfaces.CallBackMessenger;
-import interfaces.EngineInterface;
-import tetris.logging.TetrisLogger;
 import tetris.engine.mechanics.*;
 import tetris.engine.shapes.SHAPETYPE;
 
@@ -30,7 +22,9 @@ public class GameWindow extends JFrame {
 	 */
 	private static final long serialVersionUID = -2037282391019749417L;
 	private Engine engine;
-	private int[][] gameState;
+	private int[][] gameState = null;
+	private SHAPETYPE swapShapeData = SHAPETYPE.I;
+	private SHAPETYPE nextShapeData = SHAPETYPE.I;
 	private Board gameBoard;
 	private AuxShapeBoard swapShape;
 	private AuxShapeBoard nextShape;
@@ -69,7 +63,7 @@ public class GameWindow extends JFrame {
 			this.nextShape.updateScreen(nextShape);
 		}
 	}
-	public synchronized void updateScreen() {			
+	public synchronized void updateScreen() {	
 		if (this.needToRequestFocus) {
 			this.requestFocus();
 			this.needToRequestFocus = false;
@@ -79,28 +73,53 @@ public class GameWindow extends JFrame {
 		}
 		if (this.engine.isGameLost()) {
 			this.engine.pause();
-			for (int row=0; row<this.gameState.length;row++) {
-				for (int column=0;column<this.gameState[0].length;column++) {
-					//this.gameState[row][column] = -1;
+
+		} else {
+				synchronized (gameState) {
+					gameState = this.engine.getGameDisplayBoard();
+				}
+				synchronized (swapShapeData) {
+					synchronized (nextShapeData) {
+						swapShapeData = engine.getSwapShape();
+						nextShapeData = engine.getNextShape();
+					}
+				}
+				
+				if (justStarted) {
+					updateSwap();
+					justStarted = false;
+					return;
+				}
+				if (oldLinesCleared < engine.getLinesCleared()) {
+					oldLinesCleared = engine.getLinesCleared();
+					setTitle();
+				}
+		}
+	}
+	private class ScreenUpdater extends TimerTask {
+		@Override
+		public void run() {
+			//System.out.println("run1");
+			synchronized (gameState) {
+				//System.out.println("run2");
+				if (gameState != null) gameBoard.updateScreen(gameState);
+				else System.out.println("GS null");
+			}
+			synchronized (swapShapeData) {
+				synchronized (nextShapeData) {
+					//System.out.println("run3");
+					if (nextShapeData != null && swapShapeData != null) {
+						updateShapeBoards(swapShapeData, nextShapeData);
+					}
 				}
 			}
-		} else {
-			this.gameState = this.engine.getGameDisplayBoard();
+			//System.out.println("run5");
+		/*	if (oldLinesCleared < engine.getLinesCleared()) {
+				oldLinesCleared = engine.getLinesCleared();
+				setTitle();
+			}*/
 		}
-		this.gameBoard.updateScreen(this.gameState);		
-		this.updateShapeBoards(this.engine.getSwapShape(), this.engine.getNextShape());
-		if (this.justStarted) {
-			this.updateSwap();
-			this.justStarted = false;
-			return;
-		}
-		if (this.oldLinesCleared < this.engine.getLinesCleared()) {
-			if (this.engine.getLinesCleared() % 10 == 0) {
-				int oldGravity = this.engine.getGravity();				
-			}
-			this.oldLinesCleared = this.engine.getLinesCleared();
-			setTitle();
-		}
+			
 	}
 	private void setTitle () {
 		this.setTitle("Mega Tetris" + " " + this.engine.getLinesCleared() + " Lines Cleared");
@@ -248,7 +267,7 @@ public class GameWindow extends JFrame {
 		int scale = 30;
 		System.out.println("Starting.. ");
 		this.gameBoard = new Board(gui.rows,gui.cols,scale,engine);
-		infoWindow.start();
+		//infoWindow.start();
         add(this.gameBoard);
         this.pack();
         setTitle("Mega Tetris - 0 Lines Cleared");
@@ -259,6 +278,11 @@ public class GameWindow extends JFrame {
         this.gameState = new int[gui.rows][gui.cols];        
         setTitle();
         this.requestFocus();
+        
+        Timer screenUpdateTimer = new Timer();
+        screenUpdateTimer.schedule(new ScreenUpdater (), 100, 70);
+        System.out.println("Screen timer set");
+        
 		this.addKeyListener(new KeyAdapter() {
 			private boolean holdInput = false;
 			private boolean holdcRotate = false;
@@ -358,7 +382,6 @@ public class GameWindow extends JFrame {
 					int newValue = oldValue + increment;
 					if (newValue == 0) newValue = 1;
 					if (newValue > oldValue) {
-						System.out.println("AI Delay: " + newValue);
 						gui.engine.setDelay(newValue);
 					}
 				}
@@ -367,7 +390,6 @@ public class GameWindow extends JFrame {
 					int increment = (int)Math.ceil(oldValue*0.15);
 					int newValue = oldValue - increment;
 					if (newValue < oldValue && newValue >= 0) {
-						System.out.println("AI Delay: " + newValue);
 						gui.engine.setDelay(newValue);
 					}
 				}

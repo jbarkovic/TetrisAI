@@ -68,6 +68,11 @@ public class GameState implements java.io.Serializable {
 	public void setOtherShapeData(Integer[] otherShapeData) {
 		this.otherShapeData = otherShapeData;
 	}
+	
+	public boolean equals (GameState other) {
+		return other.getBoardWithCurrentShape().equals(this.getBoardWithCurrentShape());
+	}
+	
 	public void setMessage (String message) {
 		if (this.message == null) this.message = message;
 		this.message += message;

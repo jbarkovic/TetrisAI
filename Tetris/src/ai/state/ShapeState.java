@@ -48,6 +48,15 @@ public class ShapeState implements Comparable<ShapeState>, Serializable {
 		setMemory(otherState.coords);
 		this.type = otherState.type;
 	}
+	public int [] getCoords1D () {
+		int [] out = new int [8];
+		int ptr = 0;
+		for (int i=0;i<coords.length && ptr < out.length;i++) {
+			out [ptr++] = coords[i][0];
+			out [ptr++] = coords[i][1];
+		}
+		return out;
+	}
 	public int [][] getCoords () {
 		return this.coords;
 	}

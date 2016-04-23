@@ -30,12 +30,17 @@ public class SolutionValue {
 	//protected static double[] defaults = new double[] {10,11,10,0, 1, 0, 0,0,0};
 	//protected static double[] defaults = new double[] {10,300,10,1, 2.5, 3, 1,5,0};
 	//protected static double[] defaults = new double[] {20,30,21,0,430000, 0, 0,0,1, 0}; //Holly cow 95 000
+	
+	//protected static double[] defaults = new double[] {20,30,21,0,430000, 0, 0,0,1, 0};
 //	protected static double[] defaults = new double[] {20,30,21,0, 4300, 0, 0, 2,1,0}; //36000
 	//protected static double[] defaults = new double[] {1,1,1,1, 5, 0, 0, 1,0,0}; 
 	
 	//protected static double[] defaults = new double[] {10,12,10,3, 15, 0, 0,0,0,0}; //36000, not 36 000
-	//protected static double[] defaults = new double[] {15,16,11,0, 100, 3, 0,0,1,2}; //56000
-	protected static double[] defaults = new double[] {15,30,11,2, 20, 2, 0,0,2,5};
+	//protected static double[] defaults = new double[] {15,16,11,0, 100, 3, 0,1,1,2}; //56000
+	//protected static double[] defaults = new double[] {1000,0,1050,10, 155, 0, 0,0,0}; //56000
+	//protected static double[] defaults = new double[] {15,30,11,2, 20, 2, 0,0,2,5}; // Jan 3 2016
+	//protected static double[] defaults = new double[] {15,46000000000d,2000,3, 8, 1, 1,1,1,1};
+	protected static double[] defaults = new double[] {300, 3000, 100, 0, 100, 0,0,0,0,0}; // 82518 lines on Feb 1, 2016
 	//protected static double[] defaults = new double[] {15,30,15,0, 100, 3, 0,0,1,2};
 	//protected static double[] defaults = new double[] {10,11,10,3, 20, 0, 0,0,0,0}; //20 000
 //	protected static double[] defaults = new double[] {10,11,10,0,10,0,0,4,4}; //Holly cow 95 000
@@ -44,6 +49,9 @@ public class SolutionValue {
 	//protected static double[] defaults = new double[] {5,5,65,0,1,0 , 1,0};	
 	//protected static double[] defaults = new double[] {10,10,8,1,0,0 , 1,0};	
 	private final static Logger LOGGER = Logger.getLogger(SolutionValue.class.getName());
+	
+	private InternalGameBoard gBWithShape, gBWithoutShape, shapeCoords;
+	
 	static {
 		LOGGER.setLevel(Level.OFF);	
 		//loadConfiguration(null);
@@ -139,46 +147,54 @@ public class SolutionValue {
 
 	public double calculateSolution(ComputedValue values) {
 		if (values == null) return Double.NEGATIVE_INFINITY;
-		double val = -90000000;
-		if (values.proximityToSpawn < 1.51d) {
-			//System.out.println("SolutionValue.java: Too close to spawn ["+values.proximityToSpawn+"] returning neg inf");
-			val+=10d;
-		} else {
-			val = 0d;
-		}
-		val += ( DS*values.density/Math.max(values.missingBelow,1) + AC*values.adjacentCount -MB*values.missingBelow + EC*values.edgeCount + RC*values.numRowsThatWillClear - BF*values.buriedFactor - BG*values.badGapBesideShape + CF*values.coveredFactor);//);
+		double val = 0d;
+		
+		val += AC*values.adjacentCount; 
+		val -= MB*values.missingBelow;
+		val += EC*values.edgeCount;
+		val += Math.pow(RC,values.numRowsThatWillClear);
+		val -= BF*values.buriedFactor; 
+		val -= BG*values.badGapBesideShape; 
+		val += CF*values.coveredFactor;
 		val += PS*values.proximityToSpawn;
+		
 		return val;
 	}
 	private double getDensity (GameState inState) {
 		int [][] gB = inState.getBoardWithCurrentShape().getState();
-		double density = 0d;
-		int filledSpacesCount = 0;
-		int nonEmptyRowCount = 0;
-		for (int [] coord : inState.getShape().getCoords()) {
-			int count = 0;
-			for (int col=0;col<gB[coord[0]].length;col++) {
-				if (gB[coord[0]][col] != 0) count ++;
+		
+		int totalSpacesFilled = 0;
+		int totalSpacesChecked = 0;
+		for (int row=0;row<gB.length; row++) {
+			int numFilled = 0;  // Per row
+			for (int col=0;col<gB[row].length;col++) {
+				if (gB[row][col] != 0) numFilled++;
 			}
-			filledSpacesCount += count;
-			if (count > 0) nonEmptyRowCount++;
+			
+			if (numFilled > 0) {
+				totalSpacesFilled += numFilled;
+				totalSpacesChecked += gB[row].length; 
+			}
+			
 		}
-		return filledSpacesCount / (nonEmptyRowCount * inState.numColumns());
+		return totalSpacesFilled / ((double) totalSpacesChecked); 
 	}
 	public ComputedValue getSolutionParameters(GameState inState) {
+		gBWithShape = new InternalGameBoard (inState.getBoardWithCurrentShape().getState());
+		gBWithoutShape = new InternalGameBoard (inState.getBoardWithoutCurrentShape().getState());
+		shapeCoords = new InternalGameBoard (inState.getShape().getCoords());
+		
 		ComputedValue values = new ComputedValue ();
-		values.adjacentCount = getAdjacentCount(inState);
-		values.buriedFactor  = getBurriedFactor(inState);
-		values.coveredFactor = getCoveredFactor (inState);
-		values.distanceFromBottom = getLowestShapePoint (inState);
-		values.badGapBesideShape = getBadGapBesideShape(inState);
-		values.missingBelow = getMissingBelow (inState);
-		values.edgeCount = getEdgeCount (inState);
-		values.roughness = getRoughness(inState);
-		values.density = getDensity(inState);
-		values.numRowsThatWillClear = getNumRowsThatWillClear(inState);
-		values.proximityToSpawn = getProximityToSpawn(inState);
-		values.percentDown = 100;
+		if (AC != 0d) values.adjacentCount = getAdjacentCount(inState);
+		if (BF != 0d) values.buriedFactor  = getBurriedFactor(inState);
+		if (CF != 0d) values.coveredFactor = getCoveredFactor (inState);
+		if (DG != 0d) values.distanceFromBottom = getLowestShapePoint (inState);
+		if (BG != 0d) values.badGapBesideShape = getBadGapBesideShape();
+		if (MB != 0d) values.missingBelow = getSimpleMissingBelow ();
+		if (EC != 0d) values.edgeCount = getEdgeCount (inState);
+		if (DS != 0d) values.density = getDensity(inState);
+		if (RC != 0d) values.numRowsThatWillClear = getNumRowsThatWillClear(inState);
+		if (PS != 0d) values.proximityToSpawn = getProximityToSpawn(inState);
 		
 		return values;
 	}
@@ -187,19 +203,26 @@ public class SolutionValue {
 		 * how the engine centers a shape with odd number of columns
 		 */
 		final int nCols = Math.max(inState.numColumns(),1);
-		final int nRows = Math.max(inState.numRows(),1);
-		int spawnColStart = Math.max((nCols / 2) - 3,0); 
-		int spawnColEnd = Math.min((nCols / 2) + 2, nCols-1);
+		int spawnColStart = Math.max((nCols / 2) - 2,0); 
+		int spawnColEnd = Math.min((nCols / 2) + 1, nCols-1);
 		int spawnRowStart = 0;
 		int spawnRowEnd = 1;
 		
-		double minProximity = Math.sqrt(Math.pow(nCols, 2) + Math.pow(nRows, 2));
+		double minProximity = Double.POSITIVE_INFINITY;
 		
 		for (int [] coord: inState.getShape().getCoords()) {
-			int colDiff = Math.min(Math.abs(coord[1]-spawnColStart), Math.abs(coord[1]-spawnColEnd));
-			int rowDiff = Math.min(Math.abs(coord[0]-spawnRowStart), Math.abs(coord[0]-spawnRowEnd));
+			double colDiff = 0d;
+			if (coord[1] < spawnColStart) colDiff = spawnColStart - coord[1];
+			else if (coord[1] > spawnColEnd) colDiff = coord[1] - spawnColEnd;
+			else colDiff = Math.abs((nCols/2) - coord[1]);
 			
-			double thisProximity = Math.sqrt(Math.pow(colDiff, 2) + Math.pow(rowDiff, 2));
+			double rowDiff = 0d;
+			if (coord[0] > spawnRowEnd) rowDiff = coord[0] - spawnRowEnd;
+			else if (coord[0] < spawnRowStart) rowDiff = spawnRowStart - coord[0];
+			else rowDiff = Math.abs((spawnRowEnd - spawnRowStart) - coord[0]);
+			
+			
+			double thisProximity = Math.sqrt(colDiff*colDiff + rowDiff*rowDiff);
 			minProximity = Math.min(minProximity,  thisProximity);
 		}
 		return minProximity;
@@ -246,6 +269,13 @@ public class SolutionValue {
 		}
 		return lowestRow;
 	}
+	private int getSimpleMissingBelow () {
+		int count = 0;
+		for (int coord=0; coord<4;coord++) {
+			if (gBWithShape.getWithCheck(shapeCoords.get(coord, 0)+1, shapeCoords.get(coord, 1)) == 0) count++;
+		}
+		return count;
+	}
 	private int getMissingBelow (GameState inState) {
 		int [] rowsThatWillClear = getRowsThatWillClear (inState);
 		int [][] gB = inState.getBoardWithCurrentShape().getState();
@@ -274,10 +304,10 @@ public class SolutionValue {
 		}
 		return missingBelow;
 	}
-	private static boolean inBounds (final int r, final int c, final GameState gState) {
-		int [] bounds = gState.getBoardSize();
-		if (r >= bounds [0] || r < 0) return false;
-		if (c >= bounds [1] || c < 0) return false;
+	private boolean inBounds (final int r, final int c, final GameState gState) {
+		int maxRows = gState.numRows();
+		int maxCols = gState.numColumns();
+		if (r >= maxRows || c >= maxCols || (r | c) < 0) return false;
 		return true;
 	}
 	private int getCoveredFactor (GameState inState) {
@@ -295,7 +325,7 @@ public class SolutionValue {
 		final int maxCol = inState.numColumns() - 1; // Cause array indexes
 		final int maxRow = inState.numRows() - 1;
 		for (int [] coord : inState.getShape().getCoords()) {
-			if (coord[0] == maxRow) count+= 1;
+			if (coord[0] == maxRow || coord[0] == 0) count++;
 			if (coord[1] == 0 || coord[1] == maxCol) count++; 
 		}
 		return count;
@@ -338,7 +368,7 @@ public class SolutionValue {
 	private int getRoughness (GameState inState) {
 		return getRoughness (inState, 0, inState.getBoardWithoutCurrentShape().getState()[0].length);
 	}
-	private static int getAdjacentCount (GameState inState) {
+	private int getAdjacentCount (GameState inState) {
 		int count = 0;
 		int [][] gB = inState.getBoardWithoutCurrentShape().getState();
 		for (int [] coord : inState.getShape().getCoords()) {
@@ -373,24 +403,23 @@ public class SolutionValue {
 		}
 		return rowsThatWillClear;
 	}
-	private int getBadGapBesideShape (GameState inState) {
+	private int getBadGapBesideShape () {
 		int numBadGaps = 0;
-		int [][] gB = inState.getBoardWithCurrentShape().getState();
-		for (int [] coord : inState.getShape().getCoords()) {
-			if (inBounds(coord[0],coord[1]+1,inState) && gB[coord[0]][coord[1]+1] == 0) {
-				if (inBounds(coord[0],coord[1]+2,inState)) {
-					if (gB[coord[0]][coord[1]+2] != 0) {
-						numBadGaps++;
-					}
-				} else numBadGaps++;
+		int rows = gBWithShape.getRows();
+		int cols = gBWithShape.getCols();
+		
+		
+		int countSinceLast = 0;
+		for (int r=0;r<rows;r++) {
+			for (int c=0;c<cols;c++) {
+				if (gBWithShape.get(r, c) == 0) countSinceLast++;
+				else {
+					if (countSinceLast == 1) numBadGaps++;
+					countSinceLast = 0;
+				}
 			}
-			if (inBounds(coord[0],coord[1]-1,inState) && gB[coord[0]][coord[1]-1] == 0) {
-				if (inBounds(coord[0],coord[1]-2,inState)) {
-					if (gB[coord[0]][coord[1]-2] != 0) {
-						numBadGaps++;
-					}
-				} else numBadGaps++;
-			}
+			if (countSinceLast == 1) numBadGaps++;
+			countSinceLast = 0;
 		}
 		return numBadGaps;
 	}
@@ -407,5 +436,40 @@ public class SolutionValue {
 			}
 		}
 		return gameBoard.length;
+	}
+	private class InternalGameBoard {
+		final int [] board;
+		final int rows, cols;
+		public InternalGameBoard (int [][] sqBoard) {
+			rows = sqBoard.length;
+			cols = sqBoard[0].length;
+			
+			board = new int [rows*cols];
+			
+			int r,c;
+			for (int i=0;i<board.length;i++) {
+				r = i / cols;
+				c = i % cols;
+				
+				board[i] = sqBoard[r][c];
+			}
+		}
+		
+		public final int getRows () {
+			return rows;
+		}
+		public final int getCols () {
+			return cols;
+		}
+		public final int getWithCheck (final int r, final int c) {
+			if (r >= rows || c >= cols || (r | c) < 0) {
+				return -1;
+			} else {
+				return get (r, c);
+			}
+		}
+		public final int get (final int r, final int c) {
+			return board[r*cols + c];
+		}
 	}
 }

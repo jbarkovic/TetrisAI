@@ -37,6 +37,26 @@ public class BoardState implements Serializable{
 	protected void setState (BoardState other) {
 		setState (other.boardSpaces);
 	}
+	public boolean equals (BoardState other) {
+		return Arrays.equals(gameSize, other.gameSize) && Arrays.deepEquals(boardSpaces, other.boardSpaces);
+	}
+	
+	public boolean colorBlindEquals (BoardState other) {
+		if (other == null) return false;
+		else if (this.boardSpaces.length != other.boardSpaces.length) return false;
+		else {
+			for (int i=0;i<boardSpaces.length;i++) {
+				if (boardSpaces[i].length != other.boardSpaces[i].length) return false;
+				else {
+					for (int j=0;j<boardSpaces[i].length;j++) {
+						if ((boardSpaces[i][j]==0)^(other.boardSpaces[i][j]==0)) return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+	
 	private void setState (int [][] board) {
 		if (gameSize[0] != board.length || gameSize[1] != board[0].length) {
 			gameSize [0] = board.length;

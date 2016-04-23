@@ -30,9 +30,9 @@ public class AITools {
 		int rVal = r.nextInt(7)+1;
 		return SHAPETYPE.intToShapeType(rVal);
 	}
-	public static GameState loadShape (GameState inState, SHAPETYPE type) {
-		if (RotationManager.doWeKnowShapeYet(type)) {
-			return new GameState(inState.getBoardWithCurrentShape(), RotationManager.getStartState(type));
+	public static GameState loadShape (GameState inState, SHAPETYPE type, RotationManager rotationManager) {
+		if (rotationManager.doWeKnowShapeYet(type)) {
+			return new GameState(inState.getBoardWithCurrentShape(), rotationManager.getStartState(type));
 		} else {
 			return inState;
 		}

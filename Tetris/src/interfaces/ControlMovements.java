@@ -3,43 +3,26 @@ package interfaces;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import ai.logic.AI;
-import ai.logic.AIBacktrack;
-
 public class ControlMovements {
-	private int [] previous = null;
 	private ArrayList<int []> stepBuffer = new ArrayList<int []> ();
-	Thread controlThread;
-	private AIBacktrack ourAI = null;
+	private int ptr = 0;
 	
-	public void setAI (AIBacktrack aiBacktrack) {
-		this.ourAI = aiBacktrack;
-	}
 	public ControlMovements () {		
 	}
 	public ControlMovements (int [][] steps) {
 		for (int [] singleStep : steps) {
-			filterAndAdd (singleStep);
+			if (singleStep != null) {
+				if (singleStep.length == 3) {
+					stepBuffer.add(Arrays.copyOf(singleStep, singleStep.length));
+				} else System.err.println("WARNING: An improper length instruction was given to ControlMovements constructor: " + singleStep.length);
+			} else {
+				System.err.println("WARNING: A null step was given to ControlMovements constructor");
+			}
 		}
-		//dumpPattern();
 	}
 	public void addAll (ControlMovements more) {
 		synchronized (stepBuffer) {
 			stepBuffer.addAll(more.stepBuffer);
-		}
-	}
-	@Override
-	public ControlMovements clone () {
-		ControlMovements newCopy = new ControlMovements (this.stepBuffer.toArray(new int [][] {{}}));
-		if (this.previous != null) {
-			newCopy.previous = Arrays.copyOf(previous, previous.length);
-		}
-		return newCopy;
-	}
-	private void filterAndAdd (int [] step) {
-		if (step != null && step.length == 3) {
-			int [] clone = new int [] {step[0],step[1],step[2]};
-			stepBuffer.add(clone);
 		}
 	}
 	public void dumpShortFormPattern() {
@@ -57,7 +40,9 @@ public class ControlMovements {
 	}
 	public void dumpPattern () {
 		for (int i=0;i<stepBuffer.size();i++) {
-			System.out.println (Arrays.toString(stepBuffer.get(i)));
+			System.out.print (Arrays.toString(stepBuffer.get(i)));
+			if (i==ptr) System.out.print ("  <-- ptr");
+			System.out.println();
 		}
 		dumpShortFormPattern();
 	}
@@ -85,27 +70,27 @@ public class ControlMovements {
 		sb.append(" -> " + count);
 		return sb.toString();
 	}
-	public void add (int [] step) {
-		filterAndAdd (step);
-	}
-	public int [] previous () {
-		return this.previous;
-	}
 	public int numLeft () {
-		return stepBuffer.size();
+		return stepBuffer.size() - ptr;
 	}
 	public int [] next () {
+	
 		synchronized (stepBuffer) {
-			if (stepBuffer.size() > 0) {
-				int [] retVal = stepBuffer.get(0);
-				stepBuffer.remove(0);
-				previous = retVal;
+			if (hasNextInternal ()) {
+				int [] retVal = stepBuffer.get(ptr);
+				ptr++;
 				return retVal;
+			} else {
+				return null;
 			}
-			return null;
 		}
 	}
+	private boolean hasNextInternal () {
+		return ptr >= 0 && ptr < stepBuffer.size();
+	}
 	public boolean hasNext () {
-		return (stepBuffer.size() > 0 && stepBuffer.get(0) != null);
+		synchronized (stepBuffer) {
+			return hasNextInternal();
+		}
 	}
 }

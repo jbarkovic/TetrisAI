@@ -1,6 +1,7 @@
 package ai.logic;
 
 import ai.state.GameState;
+import ai.state.RotationManager;
 import ai.transformations.ShapeTransforms;
 
 public class GraphBuilder {
@@ -8,23 +9,23 @@ public class GraphBuilder {
 	private GraphBuilder () {
 	}
 	
-	public static GameGraph buildGraph (GameState startState) {
+	public static GameGraph buildGraph (GameState startState, RotationManager rotationManager) {
 		if (startState == null) return null;
-		return recursiveBuild(new GameGraph(startState));
+		return recursiveBuild(new GameGraph(startState), rotationManager);
 	}
-	private static GameGraph recursiveBuild (GameGraph graph) {
-		recursiveNodeExplore(graph, graph.getStart());
+	private static GameGraph recursiveBuild (GameGraph graph, RotationManager rotationManager) {
+		recursiveNodeExplore(graph, graph.getStart(), rotationManager);
 		//System.out.println("Built a graph with " + graph.size() + " nodes");
 		return graph;
 	}
-	private static PathNode recursiveNodeExplore (GameGraph graph, PathNode node) {
+	private static PathNode recursiveNodeExplore (GameGraph graph, PathNode node, RotationManager rotationManager) {
 		if (node!=null && graph!=null && !node.complete()) {	
 			
-			recursiveNodeExplore (graph, tryDrop(graph, node));
+			recursiveNodeExplore (graph, tryDrop(graph, node), rotationManager);
 
-			recursiveNodeExplore (graph, tryShiftRight(graph, node));
-			recursiveNodeExplore (graph, tryShiftLeft(graph, node));
-			recursiveNodeExplore (graph, tryRotate(graph, node));
+			recursiveNodeExplore (graph, tryShiftRight(graph, node), rotationManager);
+			recursiveNodeExplore (graph, tryShiftLeft(graph, node), rotationManager);
+			recursiveNodeExplore (graph, tryRotate(graph, node, rotationManager), rotationManager);
 			node.setBariors();
 			
 
@@ -124,7 +125,7 @@ public class GraphBuilder {
 		}
 		return null;
 	}
-	private static PathNode tryRotate (GameGraph graph, PathNode parentNode) {
+	private static PathNode tryRotate (GameGraph graph, PathNode parentNode, RotationManager rotationManager) {
 		if (parentNode==null || graph==null) return null;
 		PathNode rotateNode = null;
 		if (parentNode.getLocation()[2] > 10 ) {
@@ -138,9 +139,9 @@ public class GraphBuilder {
 				System.out.println("ERROR: GraphBuilder.java: No state could be found in tryRotate");
 				return null;
 			}
-			else if (ShapeTransforms.canRotate(nodeState)) {
+			else if (ShapeTransforms.canRotate(nodeState, rotationManager)) {
 				nodeState = new GameState (nodeState);
-				ShapeTransforms.predictRotate(nodeState);
+				ShapeTransforms.predictRotate(nodeState, rotationManager);
 				rotateNode = new PathNode (parentNode, PathNode.Direction.ROTATE);
 				rotateNode = graph.getCanonical(rotateNode, nodeState); // No duplicates
 				

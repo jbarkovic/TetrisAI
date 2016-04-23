@@ -17,7 +17,9 @@ public class Dijkstras {
 	public Dijkstras (GameGraph graph) {
 		allNodes = new TreeMap<PathNode, DijkstraNode> ();
 		for (PathNode pn : graph.getNodes()) {
-			if(!(pn instanceof BariorNode) )allNodes.put(pn,new DijkstraNode(pn, Integer.MAX_VALUE));
+			if (pn == null) {
+				System.err.println("GameGraph supplied a null node within Djikstras");
+			} else if(!(pn instanceof BariorNode) )allNodes.put(pn,new DijkstraNode(pn, Integer.MAX_VALUE));
 		}
 	//	System.out.println("Dijkstras.java: Received " + allNodes.size() + " nodes");
 		startNode = new DijkstraNode(graph.getStart(), Integer.MAX_VALUE);

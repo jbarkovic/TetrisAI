@@ -1,73 +1,113 @@
 package interfaces;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-import javax.swing.Timer;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import tetris.engine.mechanics.Engine;
 
 public class EngineInterface {
-	private int [][] lastFewPatterns = new int [6][];
 	private Engine engine;
-	private int controlMovementDelay = 30;
+	private boolean cautious = true;
+	private final int rows, cols;
+	private int lastSpeed = 30;
+	private int numShapeCount;
+	private LineRateTracker lineTracker;
+	private int userSetSpeed = 30;
 	private ControlMovements sequenceBuffer = new ControlMovements ();
-	private Stepper sequenceStepper;
 	private Object accessLock = new Object();
+	private Timer sequenceStepper;
+	
 	
 	public EngineInterface (int rows, int cols, int speed, CallBackMessenger cback) {
+		this.rows = rows;
+		this.cols = cols;
 		engine = new Engine(rows,cols,speed,cback);
-		for (int i=0;i<lastFewPatterns.length;i++) {
-			lastFewPatterns[i] = new int [3];
-		}
-		this.engine = engine;
-		sequenceStepper = new Stepper (controlMovementDelay);
-		sequenceStepper.run();
+		sequenceStepper = new Timer (false);
+		
+		lineTracker = new LineRateTracker();
+		
+		sequenceStepper.schedule(new SequenceExecutor (), 2, speed);
 	}
-	public synchronized int setDelay (int newDelay) {
-		int oldDelay = controlMovementDelay;
-		controlMovementDelay = newDelay;
-		sequenceStepper.setDelay(controlMovementDelay);
+	public synchronized int setDelay (int speed) {
+		if (speed > 0) {
+			userSetSpeed = speed;
+			return setDelayInternal (speed);
+		} else {
+			return lastSpeed;
+		}
+	}
+	private synchronized int setDelayInternal (int speed) {
+		int oldDelay = lastSpeed;
+		if (speed > 0) {
+
+			lastSpeed = speed;
+			
+			sequenceStepper.cancel();
+			sequenceStepper = new Timer (false);
+			
+			sequenceStepper.scheduleAtFixedRate(new SequenceExecutor (), 2, speed);
+			System.out.println("AI Speed: " + speed);
+		}
 		return oldDelay;
 	}
 	public Engine getEngine () {
 		return engine;
 	}
 	private void stepSequence () {
-	//	System.out.println ("in step");
-		if (sequenceBuffer.hasNext()) {
-			//System.out.println ("STEPPING");
-			boolean overBefore = engine.isGameLost();
-			for (int i=lastFewPatterns.length-1;i>0;i--) {
-				if (!overBefore) lastFewPatterns[i] = lastFewPatterns[i-1];
-			}
-			lastFewPatterns[0] = sequenceBuffer.next();
-			executePatterns (lastFewPatterns[0]);
-			boolean overNow = engine.isGameLost();
-			if (!overBefore && overNow) {
-				System.out.println("Last " + lastFewPatterns.length + " controll movements: ");
-				for (int i=0;i<lastFewPatterns.length;i++) {
-					int [] patt = lastFewPatterns[i];
-					if (patt!=null && patt.length==3) System.out.println("{"+patt[0]+","+patt[1]+","+patt[2]+"}");
-				}
-			}
+		if (engine.isGameLost()) {
+			sequenceStepper.cancel();
+			
+			System.out.println("Engine reports GameOver, printing last control sequence executed...");
+			sequenceBuffer.dumpPattern();
+			
+		} else if (sequenceBuffer.hasNext()) {
+			executePatterns (sequenceBuffer.next());
+		} else {
+			synchronized (accessLock) {
+				accessLock.notifyAll();
+			}	
 		}
 	}
 	public void executeSequence (ControlMovements sequence) {
-		//sequenceBuffer.addAll(sequence);
-		sequenceBuffer = sequence;
-		/*if (stepperThread != null && stepperThread.isAlive()) {
-			try {
-				System.out.println("Joining");
-				stepperThread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+		synchronized (accessLock) {
+			while (sequenceBuffer.hasNext()) {
+				try {
+					accessLock.wait();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					return;
+				}
 			}
-		}*/
+			numShapeCount ++;
+			
+			lineTracker.recordShape(engine.getLinesCleared());
 
+			if (numShapeCount %500 == 0) {
+				System.out.println(String.format("Lines per second: %3.3f", lineTracker.getAvgTime()));
+			}
+			if (cautious) {
+				if (lineTracker.getLineRate() > (cols / 4d)*1.1) {
+					System.err.println("AI is slowing down to ensure correctness");
+					// Somethings wrong cause we're loosing at this rate, could be time based, try slowing down
+					int newRate = lastSpeed*2;
+					if (newRate > userSetSpeed+30) {
+						newRate = userSetSpeed+30;
+						System.err.println("Error: AI has slowed to its min speed, something's fucky");
+					}
+					setDelayInternal(newRate);
+				} else if (lineTracker.getLineRate() < (cols / 4d)*0.95){
+					int newRate = lastSpeed / 2;
+					if (newRate < userSetSpeed) newRate = userSetSpeed;
+
+					if (newRate != lastSpeed) setDelayInternal(newRate);
+				}
+			}
+			sequenceBuffer = sequence;
+		}
 	}
 	public int getDelay () {
-		return this.controlMovementDelay;
+		return this.lastSpeed;
 	}
 	public synchronized ai.state.SHAPETYPE getCurrentShape () {
 		return convertShapetypes (this.engine.getCurrentShape());
@@ -132,7 +172,7 @@ public class EngineInterface {
 	private synchronized ai.state.SHAPETYPE convertShapetypes (tetris.engine.shapes.SHAPETYPE engineType) {
 		return ai.state.SHAPETYPE.intToShapeType(engineType.toInt());
 	}
-	private boolean executePatterns(int [] patt) {
+	private synchronized boolean executePatterns(int [] patt) {
 		if (patt == null) return false;
 		if (engine == null) {
 			System.err.println ("ERROR: ControlMovements: EngineInterface was null");
@@ -172,49 +212,71 @@ public class EngineInterface {
 	public int getNumberOfRowsCleared () {
 		return engine.getLinesCleared();
 	}
-	private class Stepper implements Runnable {
-		private int delay;
-		private Timer timer;
-		Stepper (int delay) {
-			this.delay = delay;
-		}
-		public int setDelay (int delay) {
-			int oldDelay = delay;
-			if (timer != null) {
-				this.delay = delay;
-				timer.setDelay(delay);
-			}
-			return oldDelay;
-		}
-		//}
+	private class SequenceExecutor extends TimerTask {
+
 		@Override
 		public void run() {
-				//synchronized (accessLock) {
-					//while (true) {
-				ActionListener taskPerformer = new ActionListener() {
-					public void actionPerformed(ActionEvent evt) {
-							stepSequence ();
-					}
-				};
-				timer = new Timer(delay, taskPerformer);
-				timer.start();
-				/*
-					while (this.sequence.hasNext() && executePatterns (sequence.next())) {
-						//if (this.sequence.hasNext() && executePatterns (sequence.next())) {}
-						System.out.println ("While");
-						try {
-							Thread.sleep(delay);
-						} catch (InterruptedException e) {
-							System.err.println ("ERROR Executing control movements...");
-							e.printStackTrace();
-						}
-					}
-				}*/
-			//}		
+			stepSequence();
+			
 		}
-	}
-	public void pause() {
-		engine.pause();
 		
+	}
+	private class LineRateTracker {
+		private long lastTime = 0;
+		private double avgTime;
+		private int lastNumLines = 0;
+		private int [] rateHistory = new int[15];
+		private double [] lineTimes = new double [40];
+		private double avg = 0d;
+		
+		
+		public void recordShape (int linesCleared) {
+			if (lastTime ==0) lastTime = System.nanoTime();
+			if (linesCleared > lastNumLines) {
+
+				updateAvg();
+				updateTime();
+				
+				lineTimes[0] = (Math.max(1, linesCleared - lastNumLines)) / ((double)(System.nanoTime() - lastTime)/1000000000d);
+				lastTime = System.nanoTime();
+				rateHistory[0] = 0;
+				
+				lastNumLines = linesCleared;
+			} else {
+				rateHistory[0]++;
+			}
+		}
+		private void updateTime () {
+			avgTime = 0l;
+			
+			for (int i=0;i<lineTimes.length;i++) {
+				avgTime += lineTimes[i];
+			}
+			avgTime /= lineTimes.length;
+			for (int i=lineTimes.length-1; i>0;i--) {
+				lineTimes [i] = lineTimes[i-1];
+			}
+		}
+		
+		private void updateAvg () {
+			avg = 0d;
+			for (int i=0;i<rateHistory.length;i++) {
+				avg += rateHistory[i];
+			}
+			avg /= rateHistory.length;
+			for (int i=rateHistory.length-1; i>0;i--) {
+				rateHistory [i] = rateHistory[i-1];
+			}
+			
+			
+		}
+		
+		public double getAvgTime () {
+			return avgTime;
+		}
+		
+		public double getLineRate () {
+			return avg;
+		}
 	}
 }

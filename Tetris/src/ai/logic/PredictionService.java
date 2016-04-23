@@ -1,10 +1,12 @@
 package ai.logic;
 
 import ai.state.GameState;
+import ai.state.RotationManager;
 import ai.state.SHAPETYPE;
 
 public class PredictionService {
 	GameState startState;
+	RotationManager rotationManager;
 	int numLinesCleared;
 	public PredictionService (GameState inState) {
 		startState = new GameState(inState);
@@ -55,12 +57,12 @@ public class PredictionService {
 		}
 	}
 	private void solveAndAdd (AIBacktrack ai, GameStateGraph current, SHAPETYPE type) {	
-		GameState finalState = ai.decideSOL(current).finalState;
+		GameState finalState = ai.decideSOL(current, rotationManager).finalState;
 		current.setState(finalState.getBoardWithCurrentShape(), finalState.getShape());
 		
 		GameStateGraph child = new GameStateGraph(current);
 		child.setParent(current);
 		current.addChild(child);
-		AITools.loadShape(child, type);
+		AITools.loadShape(child, type, rotationManager);
 	}
 }

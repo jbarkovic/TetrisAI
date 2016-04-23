@@ -34,10 +34,16 @@ public class BoardTransforms {
 			}
 			if (fullCount == fullVal) {
 				numRowsCleared ++;
-				for (int subRow=row;row>0;row--) {
-					gB[subRow] = gB[subRow-1];
-					gB [0] = new int [fullVal];
+				for (int subRow=row;subRow>0;subRow--) {
+					for (int col=0;col<gB[subRow].length;col++) {
+						gB[subRow][col] = gB[subRow-1][col];
+					}
 				}
+				for (int col=0;col<gB[0].length;col++) {
+					gB[0][col] = 0;
+				}
+				
+				row++; // need to check the row that just dropped from above as well since it may be full too
 			}
 		}
 		return numRowsCleared;

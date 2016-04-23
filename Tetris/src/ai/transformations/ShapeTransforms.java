@@ -16,9 +16,9 @@ public class ShapeTransforms {
 		}
 		return false;
 	}
-	public static GameState predictRotate (GameState inState) {		
-		if (canRotate(inState)) {
-			ShapeState newCurrentShape = new ShapeState (inState.getShape(),RotationManager.getNextRotateCoords(inState), inState.getShape().getType());
+	public static GameState predictRotate (GameState inState, RotationManager rotationManager) {		
+		if (canRotate(inState, rotationManager)) {
+			ShapeState newCurrentShape = new ShapeState (inState.getShape(),rotationManager.getNextRotateCoords(inState), inState.getShape().getType());
 			if (inState.getShape().equals(newCurrentShape)) {
 				//System.err.println("ERROR: Shapes equal after a rotate. Shapetype was " + inState.getShape().getType());
 			}
@@ -83,9 +83,9 @@ public class ShapeTransforms {
 		}
 		return new int[] {minCol,maxCol,minRow,maxRow};
 	}
-	public static boolean canRotate(GameState inState) {
+	public static boolean canRotate(GameState inState, RotationManager rotationManager) {
 		int [][] gB = inState.getBoardWithoutCurrentShape().getState();
-		for (int[] coord : RotationManager.getNextRotateCoords(inState)) {
+		for (int[] coord : rotationManager.getNextRotateCoords(inState)) {
 			if (coord[0] < -500) {
 				LOGGER.severe("ERROR:\t\t\tNo next rotate pattern found!");
 				return false;			

@@ -18,7 +18,7 @@ public class SolutionNode {
 	private GameState ourState;
 	private int recursionDepth = 0;
 	private String hash;
-	private ArrayList<int []> solutionPattern = new ArrayList<int []>(300);
+	private ArrayList<int []> solutionPattern = new ArrayList<int []>();
 	private SolutionNode solutionOwner = null;
 
 	
@@ -57,16 +57,16 @@ public class SolutionNode {
 	public enum SolutionDir {
 		DOWN,RIGHT,LEFT,ROTATE1,ROTATE2,ROTATE3,START,PLUMMIT
 	}
-	public SolutionNode(GameState inState, SolutionNode parent, SolutionDir parentToUs, SHAPETYPE nextShapeType) {
+	/*public SolutionNode(GameState inState, SolutionNode parent, SolutionDir parentToUs, SHAPETYPE nextShapeType) {
 		this (inState,parent,parentToUs);
-		if (nextShapeType != null) this.nextShape = RotationManager.getStartState(nextShapeType);
+	//	if (nextShapeType != null) this.nextShape = RotationManager.getStartState(nextShapeType);
 		else this.nextShape = null;
-	}
-	private SolutionNode(GameState inState, SolutionNode parent, SolutionDir parentToUs, ShapeState _nextShape) {
+	}*/
+	/*private SolutionNode(GameState inState, SolutionNode parent, SolutionDir parentToUs, ShapeState _nextShape) {
 		this (inState,parent,parentToUs);
-		if (_nextShape != null) this.nextShape = new ShapeState (_nextShape);
+		//if (_nextShape != null) this.nextShape = new ShapeState (_nextShape);
 		else this.nextShape = null;
-	}
+	}*/
 	public SolutionNode(GameState inState, SolutionNode parent, SolutionDir parentToUs) {
 		if (ourState != null && ourState.getShape() != null) hash = ourState.getShape().dumpState(null);
 		else hash = "start";
@@ -98,7 +98,7 @@ public class SolutionNode {
 			this.r = KnownNodes.getNode(right);
 			if (this.r == null) {
 				numChildren++;
-				this.r = new SolutionNode(right,this,SolutionDir.RIGHT,nextShape);
+				this.r = new SolutionNode(right,this,SolutionDir.RIGHT/*,nextShape*/);
 				this.r.Solve();
 				this.distR = this.r.distance;
 			}
@@ -113,7 +113,7 @@ public class SolutionNode {
 			this.l = KnownNodes.getNode(left);
 			if (this.l == null) {
 				numChildren++;
-				this.l = new SolutionNode(left,this,SolutionDir.LEFT,nextShape);
+				this.l = new SolutionNode(left,this,SolutionDir.LEFT/*,nextShape*/);
 				this.l.Solve();
 				this.distL = this.l.distance;
 			}
@@ -127,7 +127,7 @@ public class SolutionNode {
 				this.r1 = KnownNodes.getNode(rotate1);
 				if (this.r1 == null) {
 					numChildren++;
-					this.r1 = new SolutionNode(rotate1,this,SolutionDir.ROTATE1,nextShape);
+					this.r1 = new SolutionNode(rotate1,this,SolutionDir.ROTATE1/*,nextShape*/);
 					this.r1.Solve();
 					this.distR1 = this.r1.distance;
 				}
@@ -142,7 +142,7 @@ public class SolutionNode {
 			this.d = KnownNodes.getNode(drop);
 			if (this.d == null) {
 				numChildren++;
-				this.d = new SolutionNode(drop,this,SolutionDir.DOWN,nextShape);
+				this.d = new SolutionNode(drop,this,SolutionDir.DOWN/*,nextShape*/);
 				this.d.Solve();
 				this.distD = this.d.distance;
 			}

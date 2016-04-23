@@ -1,14 +1,13 @@
 package tetris.engine.mechanics;
 
-import java.awt.EventQueue;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.Timer;
 
 import tetris.engine.shapes.*;
 
@@ -34,7 +33,9 @@ public class Engine implements Tetris{
 	private boolean pause;
 	//	private boolean holdInput;
 	private boolean impossibleMode;
-	private Gravity gravity;
+	//private Gravity gravity;
+	private int delay = 50;
+	Timer gravityTimer;
 	private static final int EMPTYCOLOR = 0;
 	private static final int SHADOWCOLOR = 10;
 	private boolean gameOver = false;
@@ -73,7 +74,7 @@ public class Engine implements Tetris{
 		return getGameBoard(false);
 	}
 	private int[][] getGameBoard(boolean withShadow) {
-		synchronized (accessLock) {
+		//synchronized (accessLock) {
 			boolean useShadow = false;
 			if (this.dropShadow) useShadow = true; 
 			int[][] retVal = new int[this.rows][this.columns];
@@ -95,9 +96,9 @@ public class Engine implements Tetris{
 					}
 				}
 			}
-			int [][] rr = retVal.clone ();
-			return rr;
-		}
+			//int [][] rr = retVal.clone ();
+			return retVal;
+		//}
 	}
 	public int[][] getNextShapeBoard() {
 		synchronized (accessLock) {
@@ -151,11 +152,13 @@ public class Engine implements Tetris{
 		}
 	}
 	public boolean gravityTick() {
-		if(drop(false,true)) {
+		if(drop(false, true)) {
 
 			newShape();
+			this.callBackMessenger.ringBell();
 			return true;
 		}
+		this.callBackMessenger.ringBell();
 		return false;
 
 	}
@@ -260,12 +263,11 @@ public class Engine implements Tetris{
 	public boolean dropShape() { // for the interface
 		synchronized (accessLock) {
 			boolean result = drop(true , true);
-			this.callBackMessenger.ringBell();
+			//this.callBackMessenger.ringBell();
 			return result;
 		}
 	}
 	private boolean drop(boolean frominside,boolean pushUpdate) { //returns true if collision, or done drop
-		if (this.pause && !frominside) return false;
 
 		if (this.currentShape == null || this.swappedShape == null || this.nextShape == null) return true; // needed to initialize the engine properly
 		this.holdDrops = true;
@@ -296,16 +298,21 @@ public class Engine implements Tetris{
 		return this.convertShapeToShapeType(this.swappedShape);
 	}
 	public void setGravity(int time_milliseconds) {
-
+		delay = time_milliseconds;
+		//if (gravityTimer != null) gravityTimer.cancel();
+		gravityTimer = new Timer (false);
+		gravityTimer.scheduleAtFixedRate(new Gravity (), 0, time_milliseconds);
+/*
 		if (time_milliseconds < 0) return; // no anti-gravity
 		if (this.gravity.getGravity() == 0) {
 			this.startDropThread(time_milliseconds);
 		} else {
 			this.gravity.setDelay(time_milliseconds);
-		}
+		}*/
 	}
 	public int getGravity() {
-		return this.gravity.getGravity();
+		return delay;
+		//return this.gravity.getGravity();
 	}
 	public boolean checkNewShape() {
 		return this.wasThereNewShape;
@@ -313,10 +320,10 @@ public class Engine implements Tetris{
 	public void impossible() {
 		this.impossibleMode = !this.impossibleMode;
 		if (this.impossibleMode) {
-			this.gravity.setDelay(400);
+			//this.gravity.setDelay(400);
 		}
 		else {
-			this.gravity.setDelay(800);
+			//this.gravity.setDelay(800);
 		}
 	}
 	public boolean swapShapes() {  		// returns true if succeeded
@@ -484,12 +491,12 @@ public class Engine implements Tetris{
 		}
 		}
 	}
-	private void startDropThread(int initialGravity) {
+	/*private void startDropThread(int initialGravity) {
 		Gravity.start(initialGravity,this);				
 	}
 	protected void connectGravity(Gravity g) {
 		this.gravity = g;
-	}
+	}*/
 	public void printShapeStats () {
 		if (this.shapeStats != null) {
 			HashMap<ShapeType, Double> stats = shapeStats.getStats();
@@ -779,13 +786,23 @@ public class Engine implements Tetris{
 		this.startSpaces = this.getStartSpaces(this.gameSpaceArray);
 		this.linesCleared = 0;
 		this.callBackMessenger = callBackMessenger;
-		this.startDropThread(gravity);
+		setGravity(gravity);
 
 	}
 
+	private class Gravity extends TimerTask {
 
+		@Override
+		public void run() {
+			if (!pause) {
+				//System.out.println("Tick");
+				gravityTick();
+			}
+		}
+		
+	}
 }
-final class Gravity {
+/*final class Gravity {
 	private Timer timer;
 	private int delay;
 	private boolean tryingToDrop = true;
@@ -814,9 +831,9 @@ final class Gravity {
 	public void setDelay(int time) {
 		boolean doEasySpin = false;
 		if (this.easySpin) doEasySpin = true;
-		if (doEasySpin) this.timer.stop();
-		this.timer.setDelay(time);
-		if (doEasySpin) this.timer.start();
+		//if (doEasySpin) this.timer.stop();
+	//	this.timer.setDelay(time);
+	//	if (doEasySpin) this.timer.start();
 	}
 	public int getGravity() {
 		return this.delay;
@@ -832,18 +849,19 @@ final class Gravity {
 		inTetris.connectGravity(this);
 		this.delay = delay;
 		if (delay != 0) { // to allow no gravity
-			ActionListener taskPerformer = new ActionListener() {
-				public void actionPerformed(ActionEvent evt) {
-					setDropRequestStatus(true);
-					tetris.gravityTick();
-					setDropRequestStatus(false);
-				}
+			//ActionListener taskPerformer = new ActionListener() {
+				//public void actionPerformed(ActionEvent evt) {
+					//setDropRequestStatus(true);
+					//tetris.gravityTick();
+					//setDropRequestStatus(false);
+				//}
 			};
-			this.timer = new Timer(delay, taskPerformer);
-			this.timer.start();
-		} else {
-			while (tetris.gravityTick());
-		}
+			//this.timer = new Timer(delay, taskPerformer);
+			//this.timer.start();
+		//} else {
+			//while (tetris.gravityTick());
+		//}
 	}
 }
 
+*/

@@ -24,8 +24,8 @@ public class Board extends JPanel {
 	private int xStartPosition;
 	private int w;
 	private int h;
-	private Rectangle[][] gameArray;
-	private int[][][] gameState;
+	private Rectangle[] gameArray;
+	private int[] gameState;
 	private boolean initializedYet = false;
 	private Engine engine;
 
@@ -63,23 +63,42 @@ public class Board extends JPanel {
       	  this.squareDimension--;
         }       
         this.xStartPosition = (int) ((this.w - this.columns*this.squareDimension)/2);
-        System.out.println("Square size: " + this.squareDimension + " x " + this.squareDimension);       
+        System.out.println("Square size: " + this.squareDimension + " x " + this.squareDimension); 
+        int ptr = 0;
         for (int row=0;row<this.rows;row++) {
         	  for (int col=0;col<this.columns;col++) {
-        		  this.gameArray[row][col] = new Rectangle(this.xStartPosition + col*this.squareDimension,row*this.squareDimension,this.squareDimension,this.squareDimension);      		        	
+        		  
+        		  this.gameArray[ptr] = new Rectangle(this.xStartPosition + col*this.squareDimension,row*this.squareDimension,this.squareDimension,this.squareDimension);
+        		  ptr ++;
         	  }
           }
         this.updateSpaces(g2);
         this.repaint();
     }
     private void updateSpaces(Graphics2D g2) {
-       // Rectangle clipBounds = g2.getClipBounds();
+    	int ptr = 0;
   		for (int row=0;row<this.rows;row++) {
   			for (int col=0;col<this.columns;col++) {
-  			//	if (clipBounds.contains(this.gameArray [row][col])) {
-  					g2.setColor(this.getColor(gameState[row][col][0]));
-  					g2.fill(this.gameArray[row][col]);
-  				//}
+  				
+  				Color color = Color.WHITE;
+  		    	switch (gameState[ptr]) {
+  		    	case 0 : color = Color.WHITE; break;
+  		    	case 1 : color = Color.red; break;
+  		    	case 2 : color = Color.blue; break;
+  		    	case 3 : color = Color.orange; break;
+  		    	case 4 : color = Color.green; break;
+  		    	case 5 : color = Color.yellow; break;
+  		    	case 6 : color = Color.cyan; break;
+  		    	case 7 : color = Color.magenta; break;
+  		    	case 10: color = Color.lightGray; break;
+  		    	default : color = Color.red; break;
+  		    	}
+  				
+  				
+  				g2.setColor(color);
+  				g2.fill(this.gameArray[ptr]);
+  				
+  				ptr++;
   			}
   		}
     }
@@ -87,52 +106,35 @@ public class Board extends JPanel {
     	this.resizeBoard(g2);
         this.initializedYet = true;
     }
-    public Color getColor(final int colorVal) {
-    	Color choose = Color.white;
-    	switch (colorVal) {
-    	case 0 : {break;}
-    	case 1 : {choose = Color.red; break;}
-    	case 2 : {choose = Color.blue; break;}
-    	case 3 : {choose = Color.orange; break;}
-    	case 4 : {choose = Color.green; break;}
-    	case 5 : {choose = Color.yellow; break;}
-    	case 6 : {choose = Color.cyan; break;}
-    	case 7 : {choose = Color.magenta; break;}
-    	case 10: {choose = Color.lightGray; break;}
-    	default :{choose = Color.red; break;}
-    	}
-    	return choose;
-    }
-    public void updateScreen(int[][] gameState) {
-    	for (int row=0;row<this.gameState.length;row++) {
-    		for (int col=0;col<this.gameState[row].length;col++) {
-				this.gameState [row][col][0] = gameState [row][col];
-    			if (this.gameArray != null && this.gameArray [0] != null) {
-    				boolean redraw = false;
-    				if (this.gameState [row][col][0] != this.gameState [row][col][1]) {
-    					this.gameState [row][col][1] = this.gameState [row][col][0];
-    					this.gameState [row][col][2] = 0;
-    					redraw = true;
-    					//this.repaint(this.gameArray[row][col]);  				
-    				} else if (this.gameState [row][col][2] > 0) {
-    					this.gameState[row][col][2]--;
-    					redraw = true;    					
-    				}
-    				if (redraw) {
-    					//this.repaint();
-    					if (this.gameArray[row][col] != null) this.repaint(this.gameArray[row][col]);
-    				}
+    public void updateScreen(int[][] newGameState) {
+    	
+    	boolean repaint = false;
+    	for (int row=0;row<rows;row++) {
+    		
+    		for (int col=0;col<columns;col++) {
+    			
+    			
+    			final int ptr = row*columns + col;
+    			final int oldV = gameState[ptr];
+    			final int newV = newGameState[row][col];
+    			
+    			if (oldV != newV) {
+    				gameState[ptr] = newV;
+    				repaint = true;
     			}
     		}
     	}
+    	
+    	if (repaint) repaint();
     	
     }
     private int[] getGameCoordsOfPoint(int x,int y) {
     	int[] coords = new int[] {-1,-1};
     	if (this.gameArray == null) return coords;
-    	for (int row=0;row<this.gameArray.length;row++) {
-    		for (int col=0;col<this.gameArray[0].length;col++) {
-    			if (this.gameArray[row][col].contains(x, y)) return new int[] {row,col};
+    	for (int row=0;row<rows;row++) {
+    		for (int col=0;col<columns;col++) {
+    			final int ptr = row*columns + col;
+    			if (this.gameArray[ptr].contains(x, y)) return new int[] {row,col};
     		}
     	}
     	return coords;
@@ -152,14 +154,7 @@ public class Board extends JPanel {
     			);
     }
     private void initializeGameState (int rows, int cols) {
-    	this.gameState = new int [rows][cols][3];
-    	for (int row=0;row<rows;row++) {
-    		for (int col=0;col<cols;col++) {
-    			// Set them different to force a redraw
-    			this.gameState [row][col][0] = 0;
-    			this.gameState [row][col][1] = 1;
-    		}
-    	}
+    	this.gameState = new int [rows*cols];
     }
 	public Board(int rows, int columns,double initialSquareSize) {
 
@@ -170,7 +165,7 @@ public class Board extends JPanel {
 		int dimx = (int)(this.columns*ss);
 		this.setPreferredSize(new Dimension(dimx,dimy));
 		initializeGameState (rows, columns);
-        this.gameArray = new Rectangle[this.rows][this.columns];
+        this.gameArray = new Rectangle[rows * columns];
         this.setDoubleBuffered(true);
         this.setIgnoreRepaint(true);			
 	}

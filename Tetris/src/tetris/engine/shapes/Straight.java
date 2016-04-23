@@ -83,7 +83,7 @@ public class Straight extends Shape{
 					return false;
 				}
 				int[] coordsOfSpace_2 = this.getCoordsOfSpace(this.spaces[2]);
-				if (this.gameBoard[coordsOfSpace_2[0]-1][coordsOfSpace_2[1]].getColor() == 0 && this.gameBoard[coordsOfSpace_2[0]+1][coordsOfSpace_2[1]].getColor() == 0 && this.gameBoard[coordsOfSpace_2[0]-2][coordsOfSpace_2[1]].getColor() == 0) {
+				if (this.gameBoard[coordsOfSpace_2[0]-1][coordsOfSpace_2[1]].getColor() == 0 && this.gameBoard[coordsOfSpace_2[0]+1][coordsOfSpace_2[1]].getColor() == 0 && this.gameBoard[coordsOfSpace_2[0]+2][coordsOfSpace_2[1]].getColor() == 0) {
 					return true;
 				}
 				else {

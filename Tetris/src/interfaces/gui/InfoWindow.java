@@ -44,7 +44,7 @@ public class InfoWindow extends JFrame {
 		writeData();
 	}
 	public void writeData () {
-		table.
+	//	table.
 		
 	}
 	private String [][] hashToArray () {
@@ -83,7 +83,7 @@ public class InfoWindow extends JFrame {
 		topPanel.add( scrollPane, BorderLayout.CENTER );
 		
 		setFocusable(false);
-		add(this.sd);
+		//add(this.sd);
 		this.pack();
 	}
 

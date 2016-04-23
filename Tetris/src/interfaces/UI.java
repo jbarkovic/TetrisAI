@@ -109,7 +109,8 @@ public class UI implements Watcher {
 			throw new RuntimeException ();
 		}
 	}
-	public void update () {		
+	public void update () {
+		System.out.println("UI Update");
 	}
 	public static void afterInit (int rows, int columns, String historyFile, int AISpeed, boolean plummit) {		
 	}
@@ -123,7 +124,6 @@ public class UI implements Watcher {
 		this.AISpeed = AISpeed;
 		this.usePlummit = plummit;
 		ArrayList<Watcher> watchers = new ArrayList<Watcher> (4);
-		watchers.add(this);
 		this.cback = new CallBackMessenger (watchers);
 		this.engine = new EngineInterface (rows, columns, 500, cback);
 		this.cback.linkEngine(engine);

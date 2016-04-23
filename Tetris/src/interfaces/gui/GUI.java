@@ -4,7 +4,7 @@ import java.awt.EventQueue;
 
 import interfaces.UI;
 
-public class GUI extends UI{
+public class GUI extends UI {
 	private GameWindow gw;
 	public static void main (String [] args) {
 		final UI ui = UI.produceUI(args);
@@ -18,12 +18,17 @@ public class GUI extends UI{
 	}
 	@Override
 	public void update () {
-		gw.updateScreen();
+		//System.out.println("GUI - > update");
+		if (gw != null) gw.updateScreen();
+		else System.err.println("GameWindow: null");
 	}
 	public GUI (UI ui) {
 		super (ui.rows,ui.cols,ui.historyFile,ui.AISpeed,ui.usePlummit);
+		cback.addWatcher(this);
+		System.out.println("Added watcher");
 		gw = new GameWindow (this);
 		gw.setVisible(true);
 	}
+
 }
 

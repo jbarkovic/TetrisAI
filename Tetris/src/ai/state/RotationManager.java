@@ -9,12 +9,12 @@ import tetris.engine.mechanics.Engine; // to drop the shape
 
 public class RotationManager {
 	// rotatePatterns: [
-	static private int[][][][] rotatePatterns = new int[0][0][0][0];
-	static private int[]	requirementsToRotate = new int[0];
-	static private SHAPETYPE[] knownShapes = new SHAPETYPE[0];
-	static private int knownShapePointer = 0;
+	private int[][][][] rotatePatterns = new int[0][0][0][0];
+	private int[]	requirementsToRotate = new int[0];
+	private SHAPETYPE[] knownShapes = new SHAPETYPE[0];
+	private int knownShapePointer = 0;
 
-	public static ShapeState getStartState (SHAPETYPE type) {
+	public ShapeState getStartState (SHAPETYPE type) {
 		for (int i=0;i<knownShapes.length;i++) {
 			if (knownShapes[i] == type) {
 				return new ShapeState(rotatePatterns[i][0],type);				
@@ -22,7 +22,7 @@ public class RotationManager {
 		}
 		return null;
 	}
-	public static int [][] learnShape(GameState inState, EngineInterface engine, boolean notCurrentShape) {
+	public int [][] learnShape(GameState inState, EngineInterface engine, boolean notCurrentShape) {
 		SHAPETYPE currType = inState.getShape().getType();
 		for (int i=0;i<knownShapes.length;i++) {
 			if (knownShapes[i] == currType) {
@@ -87,13 +87,13 @@ public class RotationManager {
 		}
 		return pattern;
 	}
-	public static boolean doWeKnowShapeYet (SHAPETYPE checkShape) {
+	public boolean doWeKnowShapeYet (SHAPETYPE checkShape) {
 		for (SHAPETYPE known : knownShapes) {
 			if (known == checkShape) return true;
 		}
 		return false;
 	}
-	public static int[][] getNextRotateCoords (GameState inState) {
+	public int[][] getNextRotateCoords (GameState inState) {
 		int [][] currentCoords = inState.getShape().getCoords(); // used to be coords copy
 		for (int i=0;i<4;i++) {
 			int offsetRow = rotatePatterns[knownShapePointer][i][0][0] - currentCoords[0][0];	
