@@ -100,11 +100,7 @@ public class Dijkstras {
 			String equalsMsg = "";
 			DijkstraNode next = current;
 			
-			DijkstraNode other =  getInternalNode (current.node.getDown());
-			if (other != null && (other.distance < next.distance || next==null)) next = other;
-			else if (other != null && (other.distance==next.distance)) equalsMsg += "Down ";
-			
-			other =  getInternalNode (current.node.getRight());
+			DijkstraNode other =  getInternalNode (current.node.getRight());
 			if (other != null && (other.distance < next.distance || next==null)) next = other;
 			else if (other!=null && other.distance==next.distance) equalsMsg += "Right ";
 			
@@ -115,6 +111,11 @@ public class Dijkstras {
 			other =  getInternalNode (current.node.getRotate());
 			if (other != null && (other.distance < next.distance || next==null)) next = other;
 			else if (other != null && other.distance==next.distance) equalsMsg += "Rotate ";
+			
+			other =  getInternalNode (current.node.getDown());
+			if (other != null && (other.distance < next.distance || next==null)) next = other;
+			else if (other != null && (other.distance==next.distance)) equalsMsg += "Down ";
+			
 			
 			if (next==current) {
 				recursivePrint(3,0,current.node, null);
